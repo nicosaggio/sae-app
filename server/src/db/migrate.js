@@ -25,6 +25,11 @@ function run() {
     if (aplicadas.has(archivo)) continue;
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, archivo), 'utf8');
     console.log(`Aplicando migración: ${archivo}`);
+    // foreign_keys se apaga ANTES del BEGIN a propósito: dentro de una transacción SQLite
+    // ignora el PRAGMA silenciosamente, y si una migración reconstruye una tabla (DROP +
+    // RENAME, necesario para ampliar un CHECK) con foreign_keys=ON, el DROP dispara
+    // ON DELETE CASCADE contra las tablas hijas y borra datos reales.
+    db.exec('PRAGMA foreign_keys = OFF');
     db.exec('BEGIN IMMEDIATE');
     try {
       db.exec(sql);
@@ -32,7 +37,15 @@ function run() {
       db.exec('COMMIT');
     } catch (err) {
       db.exec('ROLLBACK');
+      db.exec('PRAGMA foreign_keys = ON');
       throw err;
+    }
+    db.exec('PRAGMA foreign_keys = ON');
+    const violaciones = db.prepare('PRAGMA foreign_key_check').all();
+    if (violaciones.length > 0) {
+      throw new Error(
+        `La migración ${archivo} dejó referencias de clave foránea huérfanas: ${JSON.stringify(violaciones)}`
+      );
     }
   }
 

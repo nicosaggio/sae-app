@@ -6,20 +6,22 @@ const eventosService = require('./eventosService');
  * TODOS los presupuestos del lote, ya que para el despacho no importa de qué presupuesto
  * vino cada línea) y subdivididos por rubro.
  */
-function obtenerLotesParaExport(db, eventoId) {
-  const filas = db
-    .prepare(
-      `SELECT l.id AS lote_id, l.codigo AS lote_codigo, l.expositor AS lote_expositor,
+function obtenerLotesParaExport(db, eventoId, rubrosFiltro) {
+  let sql = `SELECT l.id AS lote_id, l.codigo AS lote_codigo, l.expositor AS lote_expositor,
               prod.rubro, prod.codigo AS producto_codigo, prod.nombre AS producto_nombre,
               pl.cantidad, pl.comentario
        FROM lotes l
        JOIN presupuestos p ON p.lote_id = l.id
        JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
        JOIN productos prod ON prod.id = pl.producto_id
-       WHERE l.evento_id = ?
-       ORDER BY l.codigo, prod.rubro, prod.nombre`
-    )
-    .all(eventoId);
+       WHERE l.evento_id = ?`;
+  const params = [eventoId];
+  if (rubrosFiltro && rubrosFiltro.length > 0) {
+    sql += ` AND COALESCE(prod.rubro, 'Sin rubro') IN (${rubrosFiltro.map(() => '?').join(',')})`;
+    params.push(...rubrosFiltro);
+  }
+  sql += ' ORDER BY l.codigo, prod.rubro, prod.nombre';
+  const filas = db.prepare(sql).all(...params);
 
   const lotesMapa = new Map();
   for (const fila of filas) {
@@ -54,7 +56,7 @@ function encabezadoEvento(doc, evento) {
   doc.moveDown(0.5);
   doc.fontSize(11).fillColor('#444');
   doc.text(`Lugar: ${evento.lugar || '—'}`);
-  doc.text(`Fechas: ${evento.fecha_inicio} a ${evento.fecha_fin}`);
+  doc.text(`Fechas: ${evento.fecha_inicio ? `${evento.fecha_inicio} a ${evento.fecha_fin}` : '(sin definir)'}`);
   doc.moveDown();
 }
 
@@ -62,27 +64,47 @@ const COL_PRODUCTO = 40;
 const COL_CODIGO = 380;
 const COL_CANTIDAD = 480;
 const COL_FIN = 555;
+const ANCHO_NOMBRE = COL_CODIGO - COL_PRODUCTO - 10;
+// Los productos van con sangría respecto del título del rubro, para que se lea como
+// contenido "dentro" del rubro y no al mismo nivel que el encabezado de sección.
+const SANGRIA_PRODUCTO = 14;
 
+/** Nombres de producto largos ocupan varias líneas — hay que sumar esa altura real,
+ *  si no la fila siguiente se dibuja encima de la cola del texto envuelto. */
 function filaTabla(doc, nombre, codigo, cantidad, opts = {}) {
+  const indent = opts.indent || 0;
+  const xNombre = COL_PRODUCTO + indent;
+  const anchoNombre = ANCHO_NOMBRE - indent;
   const y = doc.y;
   doc.fontSize(10).fillColor(opts.color || '#000');
-  doc.text(nombre, COL_PRODUCTO, y, { width: COL_CODIGO - COL_PRODUCTO - 10 });
+  const altura = doc.heightOfString(String(nombre), { width: anchoNombre });
+  doc.text(nombre, xNombre, y, { width: anchoNombre });
   doc.text(codigo || '—', COL_CODIGO, y, { width: COL_CANTIDAD - COL_CODIGO - 10 });
   doc.text(String(cantidad), COL_CANTIDAD, y, { width: COL_FIN - COL_CANTIDAD });
+  doc.y = y + altura;
   doc.moveDown(0.35);
+}
+
+/** Altura real (con wrap) de una lista de productos, para estimar saltos de página. */
+function alturaProductos(doc, productos) {
+  doc.fontSize(10);
+  return productos.reduce(
+    (acc, p) => acc + doc.heightOfString(String(p.nombre), { width: ANCHO_NOMBRE - SANGRIA_PRODUCTO }) + 8,
+    0
+  );
 }
 
 function encabezadoTabla(doc) {
   doc.fontSize(9).fillColor('#666');
-  filaTabla(doc, 'PRODUCTO', 'CÓDIGO', 'CANTIDAD', { color: '#666' });
+  filaTabla(doc, 'PRODUCTO', 'CÓDIGO', 'CANTIDAD', { color: '#666', indent: SANGRIA_PRODUCTO });
   doc.moveTo(COL_PRODUCTO, doc.y).lineTo(COL_FIN, doc.y).strokeColor('#ccc').stroke();
   doc.moveDown(0.3);
 }
 
 /** Recuadro amarillo bien visible para que un comentario no pase desapercibido. */
 function comentarioDestacado(doc, texto) {
-  const x = COL_PRODUCTO + 10;
-  const ancho = COL_FIN - COL_PRODUCTO - 10;
+  const x = COL_PRODUCTO + SANGRIA_PRODUCTO + 10;
+  const ancho = COL_FIN - COL_PRODUCTO - SANGRIA_PRODUCTO - 10;
   const textoCompleto = `AVISO: ${texto}`;
 
   doc.font('Helvetica-Bold').fontSize(9.5);
@@ -97,8 +119,7 @@ function comentarioDestacado(doc, texto) {
 }
 
 function dibujarLote(doc, lote) {
-  const totalLineas = lote.rubros.reduce((acc, r) => acc + r.productos.length, 0);
-  const alturaEstimada = 55 + totalLineas * 20;
+  const alturaEstimada = lote.rubros.reduce((acc, r) => acc + 25 + alturaProductos(doc, r.productos), 55);
   if (doc.y + alturaEstimada > doc.page.height - doc.page.margins.bottom) {
     doc.addPage();
   }
@@ -116,7 +137,7 @@ function dibujarLote(doc, lote) {
     doc.moveDown(0.2);
     encabezadoTabla(doc);
     for (const producto of grupoRubro.productos) {
-      filaTabla(doc, producto.nombre, producto.codigo, producto.cantidad);
+      filaTabla(doc, producto.nombre, producto.codigo, producto.cantidad, { indent: SANGRIA_PRODUCTO });
       if (producto.comentarios.length > 0) {
         comentarioDestacado(doc, producto.comentarios.join('; '));
       }
@@ -140,29 +161,34 @@ function dibujarTotalesEvento(doc, totales) {
   }
 
   for (const grupo of totales) {
-    const alturaEstimada = 40 + grupo.productos.length * 20;
+    const alturaEstimada = 40 + alturaProductos(doc, grupo.productos);
     if (doc.y + alturaEstimada > doc.page.height - doc.page.margins.bottom) doc.addPage();
 
     doc.fontSize(12).fillColor('#1d4ed8').text(grupo.rubro);
     doc.moveDown(0.3);
     encabezadoTabla(doc);
     for (const producto of grupo.productos) {
-      filaTabla(doc, producto.nombre, producto.codigo, producto.cantidad);
+      filaTabla(doc, producto.nombre, producto.codigo, producto.cantidad, { indent: SANGRIA_PRODUCTO });
     }
     doc.fontSize(9).fillColor('#666').text(`Subtotal ${grupo.rubro}: ${grupo.subtotal} unidades`, COL_PRODUCTO);
     doc.moveDown(0.6);
   }
 }
 
-function streamPdf(res, db, eventoId) {
+function streamPdf(res, db, eventoId, rubrosFiltro) {
   const evento = eventosService.obtener(eventoId);
   if (!evento) return false;
 
-  const lotes = obtenerLotesParaExport(db, eventoId);
-  const totales = eventosService.totalesPorEvento(eventoId);
+  const lotes = obtenerLotesParaExport(db, eventoId, rubrosFiltro);
+  let totales = eventosService.totalesPorEvento(eventoId);
+  if (rubrosFiltro && rubrosFiltro.length > 0) {
+    const permitidos = new Set(rubrosFiltro);
+    totales = totales.filter((grupo) => permitidos.has(grupo.rubro));
+  }
 
+  const sufijoArchivo = rubrosFiltro && rubrosFiltro.length > 0 ? `-${rubrosFiltro.join('-')}` : '';
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="evento-${eventoId}.pdf"`);
+  res.setHeader('Content-Disposition', `attachment; filename="evento-${eventoId}${sufijoArchivo}.pdf"`);
 
   const doc = new PDFDocument({ margin: 40 });
   doc.pipe(res);

@@ -8,7 +8,14 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get('/eventos/:id/export/pdf', (req, res) => {
-  const ok = exportService.streamPdf(res, db, Number(req.params.id));
+  const { rubros } = req.query;
+  const rubrosFiltro = rubros
+    ? String(rubros)
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean)
+    : undefined;
+  const ok = exportService.streamPdf(res, db, Number(req.params.id), rubrosFiltro);
   if (!ok) res.status(404).json({ error: 'Evento no encontrado' });
 });
 

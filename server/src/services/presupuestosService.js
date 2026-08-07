@@ -1,6 +1,6 @@
 const { db, transaction } = require('../db/connection');
 
-const ESTADOS = ['pendiente_facturar', 'facturado', 'pendiente_pago', 'cobrado'];
+const ESTADOS = ['pendiente_facturar', 'facturado', 'pendiente_pago', 'cobrado', 'cancelado'];
 
 const SELECT_PRESUPUESTO_CONTEXTO = `
   SELECT p.*, l.codigo AS lote_codigo, l.expositor AS lote_expositor,
@@ -19,7 +19,7 @@ function listarPorLote(loteId) {
   return db.prepare('SELECT * FROM presupuestos WHERE lote_id = ? ORDER BY id DESC').all(loteId);
 }
 
-function listar({ confirmado, estado, eventoId, desde, hasta } = {}) {
+function listar({ confirmado, estado, eventoId, lote, desde, hasta } = {}) {
   let sql = SELECT_PRESUPUESTO_CONTEXTO + ' WHERE 1=1';
   const params = [];
   if (confirmado !== undefined) {
@@ -33,6 +33,10 @@ function listar({ confirmado, estado, eventoId, desde, hasta } = {}) {
   if (eventoId) {
     sql += ' AND e.id = ?';
     params.push(eventoId);
+  }
+  if (lote) {
+    sql += ' AND l.codigo LIKE ?';
+    params.push(`%${lote}%`);
   }
   if (desde) {
     sql += ' AND e.fecha_inicio >= ?';
@@ -125,7 +129,7 @@ function eliminar(id) {
 }
 
 /** Igual que lotesService en StockApp: si el producto ya está en el presupuesto, suma la cantidad. */
-function guardarLinea({ presupuestoId, productoId, cantidad, comentario }) {
+function guardarLinea({ presupuestoId, productoId, cantidad, comentario, precio_unitario }) {
   return transaction(() => {
     const presupuesto = db.prepare('SELECT id FROM presupuestos WHERE id = ?').get(presupuestoId);
     if (!presupuesto) {
@@ -135,21 +139,24 @@ function guardarLinea({ presupuestoId, productoId, cantidad, comentario }) {
     }
 
     const existente = db
-      .prepare('SELECT id, cantidad, comentario FROM presupuesto_lineas WHERE presupuesto_id = ? AND producto_id = ?')
+      .prepare('SELECT id, cantidad, comentario, precio_unitario FROM presupuesto_lineas WHERE presupuesto_id = ? AND producto_id = ?')
       .get(presupuestoId, productoId);
 
     let lineaId;
     const cantidadAnterior = existente ? existente.cantidad : 0;
     if (existente) {
       const comentarioFinal = comentario || existente.comentario || null;
+      const precioFinal = precio_unitario ?? existente.precio_unitario ?? null;
       db.prepare(
-        `UPDATE presupuesto_lineas SET cantidad = ?, comentario = ?, actualizado_en = datetime('now') WHERE id = ?`
-      ).run(existente.cantidad + cantidad, comentarioFinal, existente.id);
+        `UPDATE presupuesto_lineas SET cantidad = ?, comentario = ?, precio_unitario = ?, actualizado_en = datetime('now') WHERE id = ?`
+      ).run(existente.cantidad + cantidad, comentarioFinal, precioFinal, existente.id);
       lineaId = existente.id;
     } else {
       const info = db
-        .prepare('INSERT INTO presupuesto_lineas (presupuesto_id, producto_id, cantidad, comentario) VALUES (?, ?, ?, ?)')
-        .run(presupuestoId, productoId, cantidad, comentario || null);
+        .prepare(
+          'INSERT INTO presupuesto_lineas (presupuesto_id, producto_id, cantidad, comentario, precio_unitario) VALUES (?, ?, ?, ?, ?)'
+        )
+        .run(presupuestoId, productoId, cantidad, comentario || null, precio_unitario ?? null);
       lineaId = info.lastInsertRowid;
     }
 
@@ -158,14 +165,21 @@ function guardarLinea({ presupuestoId, productoId, cantidad, comentario }) {
   });
 }
 
-function actualizarLinea({ lineaId, cantidad }) {
+function actualizarLinea({ lineaId, cantidad, comentario, precio_unitario }) {
   const linea = db.prepare('SELECT * FROM presupuesto_lineas WHERE id = ?').get(lineaId);
   if (!linea) {
     const err = new Error('Línea no encontrada');
     err.status = 404;
     throw err;
   }
-  db.prepare(`UPDATE presupuesto_lineas SET cantidad = ?, actualizado_en = datetime('now') WHERE id = ?`).run(cantidad, lineaId);
+  db.prepare(
+    `UPDATE presupuesto_lineas SET cantidad = ?, comentario = ?, precio_unitario = ?, actualizado_en = datetime('now') WHERE id = ?`
+  ).run(
+    cantidad,
+    comentario === undefined ? linea.comentario : comentario,
+    precio_unitario === undefined ? linea.precio_unitario : precio_unitario,
+    lineaId
+  );
   return db.prepare(SELECT_LINEA + ' WHERE pl.id = ?').get(lineaId);
 }
 

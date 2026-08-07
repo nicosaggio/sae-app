@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db/connection');
 const { requireAuth } = require('../middleware/requireAuth');
+const { bloquearSiSoloEstado } = require('../middleware/restringirEscritura');
 const excelImportService = require('../services/excelImportService');
 const eventosService = require('../services/eventosService');
 
@@ -22,7 +23,7 @@ function contextoPresupuesto(presupuestoId) {
 router.get('/pendientes', (req, res) => {
   const filas = db.prepare('SELECT * FROM import_pendientes WHERE resuelto = 0 ORDER BY id DESC').all();
   const resultado = filas.map((p) => {
-    if (p.tipo === 'evento_no_encontrado') {
+    if (p.tipo === 'evento_ambiguo') {
       return { ...p, datos: JSON.parse(p.datos_json) };
     }
     return {
@@ -36,10 +37,11 @@ router.get('/pendientes', (req, res) => {
 
 router.get('/estado', (req, res) => {
   const pendientes = db.prepare('SELECT COUNT(*) AS n FROM import_pendientes WHERE resuelto = 0').get().n;
-  res.json({ carpeta: excelImportService.CARPETA, pendientes });
+  const eventosSinFecha = db.prepare("SELECT COUNT(*) AS n FROM eventos WHERE fecha_inicio = ''").get().n;
+  res.json({ carpeta: excelImportService.CARPETA, pendientes, eventosSinFecha, total: pendientes + eventosSinFecha });
 });
 
-router.post('/pendientes/:id/resolver-reemplazo', (req, res) => {
+router.post('/pendientes/:id/resolver-reemplazo', bloquearSiSoloEstado, (req, res) => {
   const pendiente = db.prepare('SELECT * FROM import_pendientes WHERE id = ?').get(req.params.id);
   if (!pendiente) return res.status(404).json({ error: 'Pendiente no encontrado' });
   if (pendiente.tipo !== 'posible_reemplazo') return res.status(400).json({ error: 'Tipo de pendiente inválido' });
@@ -49,7 +51,7 @@ router.post('/pendientes/:id/resolver-reemplazo', (req, res) => {
   res.json({ ok: true });
 });
 
-router.post('/pendientes/:id/resolver-independiente', (req, res) => {
+router.post('/pendientes/:id/resolver-independiente', bloquearSiSoloEstado, (req, res) => {
   const pendiente = db.prepare('SELECT * FROM import_pendientes WHERE id = ?').get(req.params.id);
   if (!pendiente) return res.status(404).json({ error: 'Pendiente no encontrado' });
 
@@ -57,7 +59,7 @@ router.post('/pendientes/:id/resolver-independiente', (req, res) => {
   res.json({ ok: true });
 });
 
-router.post('/pendientes/:id/vincular-evento', (req, res) => {
+router.post('/pendientes/:id/vincular-evento', bloquearSiSoloEstado, (req, res) => {
   const { evento_id } = req.body || {};
   if (!evento_id) return res.status(400).json({ error: 'evento_id es obligatorio' });
 
@@ -65,7 +67,7 @@ router.post('/pendientes/:id/vincular-evento', (req, res) => {
   res.json({ ok: true, presupuesto_id: presupuestoId });
 });
 
-router.post('/pendientes/:id/crear-evento', (req, res) => {
+router.post('/pendientes/:id/crear-evento', bloquearSiSoloEstado, (req, res) => {
   const { nombre, lugar, fecha_inicio, fecha_fin } = req.body || {};
   if (!nombre || !fecha_inicio || !fecha_fin) {
     return res.status(400).json({ error: 'Nombre, fecha de inicio y fecha de fin son obligatorios' });
@@ -76,7 +78,7 @@ router.post('/pendientes/:id/crear-evento', (req, res) => {
   res.json({ ok: true, evento, presupuesto_id: presupuestoId });
 });
 
-router.post('/escanear-ahora', (req, res) => {
+router.post('/escanear-ahora', bloquearSiSoloEstado, (req, res) => {
   const resultado = excelImportService.escanear();
   res.json(resultado);
 });

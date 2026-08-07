@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { api } from '../api/client';
 import { PresupuestoPanel } from './PresupuestoPanel';
+import { useAuth } from '../context/AuthContext';
 
 export function LotePanel({ lote, productos, onCambiado }) {
+  const { puedeEscribir } = useAuth();
   const [error, setError] = useState('');
   const [editando, setEditando] = useState(false);
   const [editado, setEditado] = useState({ codigo: lote.codigo, expositor: lote.expositor || '', contacto: lote.contacto || '' });
@@ -70,22 +72,26 @@ export function LotePanel({ lote, productos, onCambiado }) {
             {lote.expositor && <span className="texto-suave"> — {lote.expositor}</span>}
             {lote.contacto && <span className="texto-suave"> ({lote.contacto})</span>}
           </strong>
-          <div className="acciones-fila">
-            <button onClick={() => setEditando(true)}>Editar lote</button>
-            <button className="peligro" onClick={borrarLote}>
-              Borrar lote
-            </button>
-          </div>
+          {puedeEscribir && (
+            <div className="acciones-fila">
+              <button onClick={() => setEditando(true)}>Editar lote</button>
+              <button className="peligro" onClick={borrarLote}>
+                Borrar lote
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      <div style={{ marginTop: 12 }}>
-        <button onClick={() => setMostrarForm(!mostrarForm)}>
-          {mostrarForm ? 'Cancelar' : '+ Nuevo presupuesto'}
-        </button>
-      </div>
+      {puedeEscribir && (
+        <div style={{ marginTop: 12 }}>
+          <button onClick={() => setMostrarForm(!mostrarForm)}>
+            {mostrarForm ? 'Cancelar' : '+ Nuevo presupuesto'}
+          </button>
+        </div>
+      )}
 
-      {mostrarForm && (
+      {puedeEscribir && mostrarForm && (
         <form onSubmit={crearPresupuesto} className="form-grid" style={{ marginTop: 12 }}>
           <div className="campo">
             <label>Número</label>

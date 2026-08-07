@@ -27,6 +27,9 @@ export function LoginPage() {
   return (
     <div className="login-shell">
       <div className="card login-card">
+        <div className="logo-box">
+          <img src="/anselmi-logo.jpg" alt="Anselmi Industria Publicitaria" />
+        </div>
         <h2>Iniciar sesión</h2>
         {error && <div className="aviso error">{error}</div>}
         <form onSubmit={onSubmit}>

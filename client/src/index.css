@@ -4,8 +4,11 @@
   --color-borde: #e0e3e8;
   --color-texto: #1f2430;
   --color-texto-suave: #6b7280;
-  --color-primario: #2563eb;
-  --color-primario-hover: #1d4ed8;
+  --color-primario: #a671aa;
+  --color-primario-hover: #8b5892;
+  --color-primario-claro: #f3e9f4;
+  --color-oscuro: #211f1e;
+  --color-oscuro-suave: #34302f;
   --color-peligro: #dc2626;
   --color-peligro-fondo: #fee2e2;
   --color-exito: #16a34a;
@@ -13,6 +16,8 @@
   --color-advertencia: #d97706;
   --color-advertencia-fondo: #fef3c7;
   --color-gris-fondo: #f1f2f4;
+  --color-info: #2563eb;
+  --color-info-fondo: #dbeafe;
   --radio: 8px;
   --sombra: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -52,16 +57,24 @@ h1, h2, h3 {
 }
 
 .sidebar {
-  width: 220px;
-  background: var(--color-superficie);
-  border-right: 1px solid var(--color-borde);
+  width: 230px;
+  background: var(--color-oscuro);
   padding: 20px 12px;
   flex-shrink: 0;
 }
 
-.sidebar h1 {
-  font-size: 18px;
-  margin: 0 0 20px 8px;
+.sidebar .logo-box {
+  background: #ffffff;
+  border-radius: var(--radio);
+  padding: 10px;
+  margin: 0 8px 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar .logo-box img {
+  max-width: 100%;
+  display: block;
 }
 
 .sidebar nav {
@@ -73,22 +86,28 @@ h1, h2, h3 {
 .sidebar nav a, .sidebar nav .nav-link {
   padding: 10px 12px;
   border-radius: var(--radio);
-  color: var(--color-texto);
+  color: #d8d3d6;
   font-size: 14px;
   font-weight: 500;
   display: block;
 }
 
-.sidebar nav a.active, .sidebar nav a:hover {
-  background: var(--color-gris-fondo);
+.sidebar nav a:hover {
+  background: var(--color-oscuro-suave);
+  color: #ffffff;
+}
+
+.sidebar nav a.active {
+  background: var(--color-primario);
+  color: #ffffff;
 }
 
 .sidebar .usuario-box {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid var(--color-borde);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 13px;
-  color: var(--color-texto-suave);
+  color: #b8b3b6;
 }
 
 .sidebar .usuario-box button {
@@ -128,6 +147,35 @@ h1, h2, h3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.dashboard-grid .card {
+  margin-bottom: 0;
+}
+
+.lista-resumen {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-resumen li {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radio);
+}
+
+.lista-resumen li:hover {
+  background: var(--color-gris-fondo);
 }
 
 .campo {
@@ -177,6 +225,7 @@ button.primario {
 
 button.primario:hover {
   background: var(--color-primario-hover);
+  border-color: var(--color-primario-hover);
 }
 
 button.peligro {
@@ -218,6 +267,12 @@ tbody tr:hover {
   background: var(--color-gris-fondo);
 }
 
+tfoot td {
+  font-weight: 700;
+  border-bottom: none;
+  border-top: 2px solid var(--color-borde);
+}
+
 .badge {
   display: inline-block;
   padding: 3px 9px;
@@ -227,8 +282,8 @@ tbody tr:hover {
 }
 
 .badge.tipo {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--color-primario-claro);
+  color: var(--color-primario-hover);
 }
 
 .badge.pendiente_facturar {
@@ -237,8 +292,8 @@ tbody tr:hover {
 }
 
 .badge.facturado {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--color-primario-claro);
+  color: var(--color-primario-hover);
 }
 
 .badge.pendiente_pago {
@@ -249,6 +304,11 @@ tbody tr:hover {
 .badge.cobrado {
   background: var(--color-exito-fondo);
   color: var(--color-exito);
+}
+
+.badge.cancelado {
+  background: var(--color-peligro-fondo);
+  color: var(--color-peligro);
 }
 
 .buscador-producto {
@@ -315,10 +375,21 @@ tbody tr:hover {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  background: var(--color-oscuro);
 }
 
 .login-card {
   width: 320px;
+}
+
+.login-card .logo-box {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.login-card .logo-box img {
+  max-width: 220px;
 }
 
 .texto-suave {
@@ -378,13 +449,27 @@ tbody tr:hover {
   border: none;
   width: 100%;
   text-align: left;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--color-primario-claro);
+  color: var(--color-primario-hover);
 }
 
 .evento-chip.con-alerta {
   background: var(--color-peligro-fondo);
   color: var(--color-peligro);
+}
+
+.evento-chip.armado {
+  background: var(--color-advertencia-fondo);
+  color: var(--color-advertencia);
+}
+
+.evento-chip.desarme {
+  background: var(--color-info-fondo);
+  color: var(--color-info);
+}
+
+.evento-chip.desarme-mismo-dia {
+  box-shadow: 0 0 0 2px var(--color-info);
 }
 
 .lote-card {

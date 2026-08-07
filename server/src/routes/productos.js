@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/requireAuth');
+const { bloquearSiSoloEstado } = require('../middleware/restringirEscritura');
 const productosService = require('../services/productosService');
 
 const router = express.Router();
@@ -11,7 +12,7 @@ router.get('/', (req, res) => {
   res.json(productosService.listar({ rubro, activo: activo === undefined ? undefined : activo === '1' }));
 });
 
-router.post('/', (req, res) => {
+router.post('/', bloquearSiSoloEstado, (req, res) => {
   const { codigo, nombre, rubro } = req.body || {};
   if (!codigo || !nombre) {
     return res.status(400).json({ error: 'Código y nombre son obligatorios' });
@@ -19,7 +20,7 @@ router.post('/', (req, res) => {
   res.status(201).json(productosService.crear({ codigo, nombre, rubro }));
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', bloquearSiSoloEstado, (req, res) => {
   const { codigo, nombre, rubro, activo } = req.body || {};
   if (!codigo || !nombre) {
     return res.status(400).json({ error: 'Código y nombre son obligatorios' });
@@ -27,7 +28,7 @@ router.put('/:id', (req, res) => {
   res.json(productosService.actualizar(Number(req.params.id), { codigo, nombre, rubro, activo }));
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', bloquearSiSoloEstado, (req, res) => {
   productosService.eliminar(Number(req.params.id));
   res.json({ ok: true });
 });

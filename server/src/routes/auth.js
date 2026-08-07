@@ -25,6 +25,7 @@ router.post('/login', (req, res) => {
     nombre_usuario: usuario.nombre_usuario,
     nombre_completo: usuario.nombre_completo,
     rol: usuario.rol,
+    solo_estado: !!usuario.solo_estado,
   });
 });
 

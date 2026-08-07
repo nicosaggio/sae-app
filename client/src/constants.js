@@ -3,6 +3,7 @@ export const ESTADOS_PRESUPUESTO = [
   { value: 'facturado', label: 'Facturado' },
   { value: 'pendiente_pago', label: 'Pendiente de pago' },
   { value: 'cobrado', label: 'Cobrado' },
+  { value: 'cancelado', label: 'Cancelado' },
 ];
 
 export function etiquetaEstadoPresupuesto(estado) {

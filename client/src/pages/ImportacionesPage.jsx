@@ -3,6 +3,7 @@ import { api } from '../api/client';
 
 export function ImportacionesPage() {
   const [pendientes, setPendientes] = useState([]);
+  const [eventosSinFecha, setEventosSinFecha] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [escaneando, setEscaneando] = useState(false);
@@ -11,7 +12,9 @@ export function ImportacionesPage() {
   async function cargar() {
     setError('');
     try {
-      setPendientes(await api.get('/importaciones/pendientes'));
+      const [p, e] = await Promise.all([api.get('/importaciones/pendientes'), api.get('/eventos?sin_fecha=1')]);
+      setPendientes(p);
+      setEventosSinFecha(e);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -32,7 +35,7 @@ export function ImportacionesPage() {
         const r = resultado.resumen;
         setAviso({
           tipo: 'exito',
-          texto: `Escaneo completo: ${r.nuevos} nuevos, ${r.actualizados} actualizados, ${r.pendientesEvento} sin evento, ${r.huerfanos} huérfanos, ${r.errores} errores.`,
+          texto: `Escaneo completo: ${r.nuevos} nuevos, ${r.actualizados} actualizados, ${r.eventosCreadosSinFecha} eventos nuevos (sin fecha), ${r.pendientesEvento} ambiguos, ${r.huerfanos} huérfanos, ${r.borrados} borrados, ${r.errores} errores.`,
         });
       } else {
         setAviso({ tipo: 'advertencia', texto: `No se pudo escanear: ${resultado.error}` });
@@ -45,8 +48,9 @@ export function ImportacionesPage() {
     }
   }
 
-  const eventosNoEncontrados = pendientes.filter((p) => p.tipo === 'evento_no_encontrado');
+  const eventosAmbiguos = pendientes.filter((p) => p.tipo === 'evento_ambiguo');
   const posiblesReemplazos = pendientes.filter((p) => p.tipo === 'posible_reemplazo');
+  const totalPendientes = pendientes.length + eventosSinFecha.length;
 
   return (
     <div>
@@ -56,7 +60,7 @@ export function ImportacionesPage() {
 
       <div className="card">
         <div className="toolbar" style={{ justifyContent: 'space-between', marginBottom: 0 }}>
-          <span className="texto-suave">{pendientes.length} pendientes de revisión</span>
+          <span className="texto-suave">{totalPendientes} pendientes de revisión</span>
           <button className="primario" onClick={escanearAhora} disabled={escaneando}>
             {escaneando ? 'Escaneando…' : 'Escanear ahora'}
           </button>
@@ -64,16 +68,32 @@ export function ImportacionesPage() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Eventos no encontrados</h3>
+        <h3 style={{ marginTop: 0 }}>Eventos sin fecha</h3>
         <p className="texto-suave" style={{ marginTop: 0 }}>
-          El EXPO del archivo no matchea ningún evento (o matchea más de uno) — hay que vincularlo a mano.
+          Se creó el evento automáticamente al llegar un presupuesto con un EXPO nuevo — falta completar lugar y
+          fechas.
         </p>
         {cargando ? (
           <p className="texto-suave">Cargando…</p>
-        ) : eventosNoEncontrados.length === 0 ? (
+        ) : eventosSinFecha.length === 0 ? (
           <p className="texto-suave">Nada pendiente.</p>
         ) : (
-          eventosNoEncontrados.map((p) => <PendienteEventoNoEncontrado key={p.id} pendiente={p} onResuelto={cargar} />)
+          eventosSinFecha.map((ev) => <EventoSinFecha key={ev.id} evento={ev} onCompletado={cargar} />)
+        )}
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Nombres de evento ambiguos</h3>
+        <p className="texto-suave" style={{ marginTop: 0 }}>
+          El EXPO del archivo matchea más de un evento (ej. una expo que se repite en el año) — hay que elegir cuál
+          es.
+        </p>
+        {cargando ? (
+          <p className="texto-suave">Cargando…</p>
+        ) : eventosAmbiguos.length === 0 ? (
+          <p className="texto-suave">Nada pendiente.</p>
+        ) : (
+          eventosAmbiguos.map((p) => <PendienteEventoAmbiguo key={p.id} pendiente={p} onResuelto={cargar} />)
         )}
       </div>
 
@@ -95,7 +115,65 @@ export function ImportacionesPage() {
   );
 }
 
-function PendienteEventoNoEncontrado({ pendiente, onResuelto }) {
+function EventoSinFecha({ evento, onCompletado }) {
+  const [form, setForm] = useState({ lugar: evento.lugar || '', fecha_inicio: '', fecha_fin: '' });
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  async function completar(e) {
+    e.preventDefault();
+    setEnviando(true);
+    setError('');
+    try {
+      await api.put(`/eventos/${evento.id}`, { nombre: evento.nombre, ...form });
+      onCompletado();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className="presupuesto-card">
+      {error && <div className="aviso error">{error}</div>}
+      <p style={{ marginTop: 0 }}>
+        <strong>{evento.nombre}</strong>
+      </p>
+      <form onSubmit={completar} className="form-grid">
+        <div className="campo">
+          <label>Lugar</label>
+          <input value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} />
+        </div>
+        <div className="campo">
+          <label>Fecha inicio</label>
+          <input
+            type="date"
+            required
+            value={form.fecha_inicio}
+            onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+          />
+        </div>
+        <div className="campo">
+          <label>Fecha fin</label>
+          <input
+            type="date"
+            required
+            value={form.fecha_fin}
+            onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+          />
+        </div>
+        <div className="acciones-fila" style={{ gridColumn: '1 / -1' }}>
+          <button type="submit" className="primario" disabled={enviando}>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function PendienteEventoAmbiguo({ pendiente, onResuelto }) {
   const [eventos, setEventos] = useState([]);
   const [eventoElegido, setEventoElegido] = useState('');
   const [mostrarForm, setMostrarForm] = useState(false);

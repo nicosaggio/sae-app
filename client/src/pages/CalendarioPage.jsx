@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
+import { useAuth } from '../context/AuthContext';
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = [
@@ -36,6 +37,7 @@ function construirGrilla(anio, mes) {
 
 export function CalendarioPage() {
   const navigate = useNavigate();
+  const { puedeEscribir } = useAuth();
   const hoy = new Date();
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [mes, setMes] = useState(hoy.getMonth());
@@ -43,7 +45,7 @@ export function CalendarioPage() {
   const { dias, inicio, fin } = useMemo(() => construirGrilla(anio, mes), [anio, mes]);
 
   const { datos: eventos } = usePolling(
-    () => api.get(`/eventos?desde=${toISO(inicio)}&hasta=${toISO(fin)}`),
+    () => api.get(`/eventos?desde=${toISO(inicio)}&hasta=${toISO(fin)}&con_presupuestos=1`),
     15000,
     [toISO(inicio), toISO(fin)]
   );
@@ -54,6 +56,19 @@ export function CalendarioPage() {
   function eventosDelDia(dia) {
     const iso = toISO(dia);
     return (eventos || []).filter((ev) => ev.fecha_inicio <= iso && ev.fecha_fin >= iso);
+  }
+
+  // El armado es un período: desde fecha_armado hasta el día antes de que arranque el
+  // evento (fecha_inicio ya se muestra con el chip normal). Análogo para el desarme, desde
+  // el día después de fecha_fin hasta fecha_desarme.
+  function eventosArmadoDelDia(dia) {
+    const iso = toISO(dia);
+    return (eventos || []).filter((ev) => ev.fecha_armado && ev.fecha_armado <= iso && iso < ev.fecha_inicio);
+  }
+
+  function eventosDesarmeDelDia(dia) {
+    const iso = toISO(dia);
+    return (eventos || []).filter((ev) => ev.fecha_desarme && ev.fecha_fin < iso && iso <= ev.fecha_desarme);
   }
 
   function irMesAnterior() {
@@ -89,18 +104,46 @@ export function CalendarioPage() {
           ))}
           {dias.map((dia) => {
             const enMes = dia.getMonth() === mes;
+            const iso = toISO(dia);
             const evs = eventosDelDia(dia);
+            const evsArmado = eventosArmadoDelDia(dia);
+            const evsDesarme = eventosDesarmeDelDia(dia);
             return (
               <div key={dia.toISOString()} className={`calendario-celda ${enMes ? '' : 'fuera-de-mes'}`}>
                 <div className="num-dia">{dia.getDate()}</div>
-                {evs.map((ev) => (
+                {evs.map((ev) => {
+                  // Si el desarme coincide con el último día del evento, no hay un chip de
+                  // desarme aparte — se marca el chip normal de ese día con un borde azul.
+                  const desarmeMismoDia = ev.fecha_desarme && ev.fecha_desarme === ev.fecha_fin && iso === ev.fecha_fin;
+                  return (
+                    <button
+                      key={ev.id}
+                      className={`evento-chip ${eventosConAlerta.has(ev.id) ? 'con-alerta' : ''} ${desarmeMismoDia ? 'desarme-mismo-dia' : ''}`}
+                      title={`${ev.nombre} — ${ev.lugar || ''}`}
+                      onClick={() => navigate(`/eventos/${ev.id}`)}
+                    >
+                      {ev.nombre}
+                    </button>
+                  );
+                })}
+                {evsArmado.map((ev) => (
                   <button
-                    key={ev.id}
-                    className={`evento-chip ${eventosConAlerta.has(ev.id) ? 'con-alerta' : ''}`}
-                    title={`${ev.nombre} — ${ev.lugar || ''}`}
+                    key={`armado-${ev.id}`}
+                    className="evento-chip armado"
+                    title={`Armado — ${ev.nombre}`}
                     onClick={() => navigate(`/eventos/${ev.id}`)}
                   >
-                    {ev.nombre}
+                    🔧 {ev.nombre}
+                  </button>
+                ))}
+                {evsDesarme.map((ev) => (
+                  <button
+                    key={`desarme-${ev.id}`}
+                    className="evento-chip desarme"
+                    title={`Desarme — ${ev.nombre}`}
+                    onClick={() => navigate(`/eventos/${ev.id}`)}
+                  >
+                    📦 {ev.nombre}
                   </button>
                 ))}
               </div>
@@ -109,14 +152,22 @@ export function CalendarioPage() {
         </div>
       </div>
 
-      <NuevoEventoForm onCreado={() => {}} />
+      {puedeEscribir && <NuevoEventoForm onCreado={() => {}} />}
     </div>
   );
 }
 
 function NuevoEventoForm({ onCreado }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nombre: '', lugar: '', fecha_inicio: '', fecha_fin: '', notas: '' });
+  const [form, setForm] = useState({
+    nombre: '',
+    lugar: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    fecha_armado: '',
+    fecha_desarme: '',
+    notas: '',
+  });
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -164,6 +215,22 @@ function NuevoEventoForm({ onCreado }) {
             required
             value={form.fecha_fin}
             onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+          />
+        </div>
+        <div className="campo">
+          <label>Fecha armado (opcional)</label>
+          <input
+            type="date"
+            value={form.fecha_armado}
+            onChange={(e) => setForm({ ...form, fecha_armado: e.target.value })}
+          />
+        </div>
+        <div className="campo">
+          <label>Fecha desarme (opcional)</label>
+          <input
+            type="date"
+            value={form.fecha_desarme}
+            onChange={(e) => setForm({ ...form, fecha_desarme: e.target.value })}
           />
         </div>
         <div className="campo">

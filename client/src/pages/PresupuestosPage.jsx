@@ -1,24 +1,37 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
 import { ESTADOS_PRESUPUESTO, etiquetaEstadoPresupuesto } from '../constants';
+import { BuscadorEvento } from '../components/BuscadorEvento';
 
 export function PresupuestosPage() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState('');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [eventoId, setEventoId] = useState(null);
+  const [eventos, setEventos] = useState([]);
+  const [lote, setLote] = useState('');
+
+  useEffect(() => {
+    api
+      .get('/eventos')
+      .then(setEventos)
+      .catch(() => {});
+  }, []);
 
   const query = new URLSearchParams();
   if (estado) query.set('estado', estado);
   if (desde) query.set('desde', desde);
   if (hasta) query.set('hasta', hasta);
+  if (eventoId) query.set('eventoId', eventoId);
+  if (lote) query.set('lote', lote);
 
   const { datos: presupuestos, cargando } = usePolling(
     () => api.get(`/presupuestos?${query.toString()}`),
     15000,
-    [estado, desde, hasta]
+    [estado, desde, hasta, eventoId, lote]
   );
 
   return (
@@ -27,6 +40,14 @@ export function PresupuestosPage() {
 
       <div className="card">
         <div className="toolbar">
+          <div className="campo">
+            <label>Evento</label>
+            <BuscadorEvento eventos={eventos} value={eventoId} onChange={setEventoId} />
+          </div>
+          <div className="campo">
+            <label>Lote</label>
+            <input placeholder="N° de lote" value={lote} onChange={(e) => setLote(e.target.value)} />
+          </div>
           <div className="campo">
             <label>Estado</label>
             <select value={estado} onChange={(e) => setEstado(e.target.value)}>
@@ -61,7 +82,6 @@ export function PresupuestosPage() {
                 <th>Cliente</th>
                 <th>Fecha</th>
                 <th>Monto</th>
-                <th>Condiciones</th>
                 <th>Estado</th>
                 <th>Origen</th>
               </tr>
@@ -74,7 +94,6 @@ export function PresupuestosPage() {
                   <td>{p.cliente_nombre || '—'}</td>
                   <td>{p.fecha || '—'}</td>
                   <td>{p.monto_total ?? '—'}</td>
-                  <td>{p.condiciones_pago || '—'}</td>
                   <td>
                     <span className={`badge ${p.estado}`}>{etiquetaEstadoPresupuesto(p.estado)}</span>
                   </td>

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export function ProductosPage() {
+  const { puedeEscribir } = useAuth();
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -78,31 +80,33 @@ export function ProductosPage() {
       <h2>Catálogo de productos</h2>
       {error && <div className="aviso error">{error}</div>}
 
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Nuevo producto</h3>
-        <form onSubmit={crear} className="toolbar">
-          <input
-            placeholder="Código"
-            required
-            value={nuevo.codigo}
-            onChange={(e) => setNuevo({ ...nuevo, codigo: e.target.value })}
-          />
-          <input
-            placeholder="Nombre"
-            required
-            value={nuevo.nombre}
-            onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
-          />
-          <input
-            placeholder="Rubro"
-            value={nuevo.rubro}
-            onChange={(e) => setNuevo({ ...nuevo, rubro: e.target.value })}
-          />
-          <button type="submit" className="primario">
-            + Agregar producto
-          </button>
-        </form>
-      </div>
+      {puedeEscribir && (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Nuevo producto</h3>
+          <form onSubmit={crear} className="toolbar">
+            <input
+              placeholder="Código"
+              required
+              value={nuevo.codigo}
+              onChange={(e) => setNuevo({ ...nuevo, codigo: e.target.value })}
+            />
+            <input
+              placeholder="Nombre"
+              required
+              value={nuevo.nombre}
+              onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
+            />
+            <input
+              placeholder="Rubro"
+              value={nuevo.rubro}
+              onChange={(e) => setNuevo({ ...nuevo, rubro: e.target.value })}
+            />
+            <button type="submit" className="primario">
+              + Agregar producto
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="card">
         {cargando ? (
@@ -147,11 +151,15 @@ export function ProductosPage() {
                       <td className="texto-suave">{p.rubro || '—'}</td>
                       <td>{p.activo ? 'Sí' : 'No'}</td>
                       <td className="acciones-fila">
-                        <button onClick={() => iniciarEdicion(p)}>Editar</button>
-                        <button onClick={() => alternarActivo(p)}>{p.activo ? 'Desactivar' : 'Activar'}</button>
-                        <button className="peligro" onClick={() => borrar(p)}>
-                          Borrar
-                        </button>
+                        {puedeEscribir && (
+                          <>
+                            <button onClick={() => iniciarEdicion(p)}>Editar</button>
+                            <button onClick={() => alternarActivo(p)}>{p.activo ? 'Desactivar' : 'Activar'}</button>
+                            <button className="peligro" onClick={() => borrar(p)}>
+                              Borrar
+                            </button>
+                          </>
+                        )}
                       </td>
                     </>
                   )}

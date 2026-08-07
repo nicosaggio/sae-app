@@ -5,6 +5,7 @@ const XLSX = require('xlsx');
 const { db, transaction } = require('../db/connection');
 const lotesService = require('./lotesService');
 const productosService = require('./productosService');
+const eventosService = require('./eventosService');
 
 const CARPETA =
   process.env.SAE_IMPORT_DIR ||
@@ -46,13 +47,49 @@ function leerArchivo(rutaCompleta) {
   const numeroRaw = val('F6');
   const numero = numeroRaw !== null && numeroRaw !== undefined ? String(numeroRaw) : null;
   const fecha = formatFecha(val('F7'));
-  const montoRaw = val('F45');
-  const monto_total = typeof montoRaw === 'number' ? montoRaw : null;
   const condiciones_pago = val('B48') ? String(val('B48')).trim() : null;
   const notas = val('B47') ? String(val('B47')).trim() : null;
 
   if (!evento_nombre || !lote_codigo) {
     return { error: 'Faltan datos obligatorios (EXPO o N° STAND) en la hoja PRESUPUESTO' };
+  }
+
+  // La tabla de ítems y la fila de TOTAL: no están en celdas fijas — el offset entre
+  // filas cambia de archivo a archivo (probablemente por filas ocultas/agrupadas en la
+  // plantilla), así que se ubican buscando el texto de encabezado/etiqueta en vez de
+  // asumir una fila fija. Confirmado contra archivos reales con 1, 3 y 14 ítems.
+  const preciosPorCodigo = new Map();
+  let monto_total = null;
+  if (ps['!ref']) {
+    const rangoPs = XLSX.utils.decode_range(ps['!ref']);
+    let headerRow = null;
+    for (let r = rangoPs.s.r; r <= rangoPs.e.r && headerRow === null; r++) {
+      for (let c = 0; c <= 5; c++) {
+        const cell = ps[XLSX.utils.encode_cell({ r, c })];
+        if (cell && String(cell.v).trim() === 'DESCRIPCION') {
+          headerRow = r;
+          break;
+        }
+      }
+    }
+    if (headerRow !== null) {
+      for (let r = headerRow + 1; r <= rangoPs.e.r; r++) {
+        const codigoCell = ps[XLSX.utils.encode_cell({ r, c: 0 })]; // A = código
+        // Columna D: CANTIDAD en filas de ítem, etiqueta ("TOTAL:", "SUBTOTAL:"...) en la
+        // fila de totales — son filas distintas, así que reusar la columna es seguro.
+        const dCell = ps[XLSX.utils.encode_cell({ r, c: 3 })];
+        const valorCell = ps[XLSX.utils.encode_cell({ r, c: 4 })]; // E = VALOR UNITARIO
+        if (codigoCell && codigoCell.v !== null && codigoCell.v !== undefined && String(codigoCell.v).trim() !== '') {
+          const codigo = String(codigoCell.v).trim();
+          if (valorCell && typeof valorCell.v === 'number') {
+            preciosPorCodigo.set(codigo, valorCell.v);
+          }
+        } else if (dCell && String(dCell.v).trim() === 'TOTAL:') {
+          const totalCell = ps[XLSX.utils.encode_cell({ r, c: 5 })]; // F = valor de la fila TOTAL:
+          if (totalCell && typeof totalCell.v === 'number') monto_total = totalCell.v;
+        }
+      }
+    }
   }
 
   const lineas = [];
@@ -73,6 +110,7 @@ function leerArchivo(rutaCompleta) {
         cantidad,
         rubro: rubroCell && rubroCell.v ? String(rubroCell.v).trim() : null,
         nombre: productoCell && productoCell.v ? String(productoCell.v).trim() : codigo,
+        precio_unitario: preciosPorCodigo.has(codigo) ? preciosPorCodigo.get(codigo) : null,
       });
     }
   }
@@ -92,14 +130,16 @@ function leerArchivo(rutaCompleta) {
   };
 }
 
+/**
+ * Crea el producto si el código todavía no existe. Si ya existe, NO le pisa nombre/rubro
+ * — el mismo código a veces se describe distinto según el evento (ej. un panel PB-250
+ * cargado como "TRASTIENDA 1m" solo en los presupuestos de BADA), y el catálogo
+ * compartido no puede ir cambiando de nombre según cuál archivo se escaneó último.
+ * Correcciones al nombre/rubro del catálogo se hacen a mano en Productos.
+ */
 function upsertProducto({ codigo, nombre, rubro }) {
   const existente = db.prepare('SELECT * FROM productos WHERE codigo = ?').get(codigo);
-  if (existente) {
-    if (existente.nombre !== nombre || existente.rubro !== rubro) {
-      productosService.actualizar(existente.id, { codigo, nombre, rubro, activo: existente.activo });
-    }
-    return existente.id;
-  }
+  if (existente) return existente.id;
   return productosService.crear({ codigo, nombre, rubro }).id;
 }
 
@@ -118,6 +158,7 @@ function agruparLineasPorCodigo(lineas) {
     const existente = mapa.get(linea.codigo);
     if (existente) {
       existente.cantidad += linea.cantidad;
+      if (existente.precio_unitario === null) existente.precio_unitario = linea.precio_unitario;
     } else {
       mapa.set(linea.codigo, { ...linea });
     }
@@ -128,11 +169,9 @@ function agruparLineasPorCodigo(lineas) {
 function guardarLineas(presupuestoId, lineas) {
   for (const linea of agruparLineasPorCodigo(lineas)) {
     const productoId = upsertProducto({ codigo: linea.codigo, nombre: linea.nombre, rubro: linea.rubro });
-    db.prepare('INSERT INTO presupuesto_lineas (presupuesto_id, producto_id, cantidad) VALUES (?, ?, ?)').run(
-      presupuestoId,
-      productoId,
-      linea.cantidad
-    );
+    db.prepare(
+      'INSERT INTO presupuesto_lineas (presupuesto_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)'
+    ).run(presupuestoId, productoId, linea.cantidad, linea.precio_unitario ?? null);
   }
 }
 
@@ -183,20 +222,44 @@ function actualizarPresupuestoDesdeArchivo(presupuestoExistente, datos, stat) {
       stat.size,
       presupuestoExistente.id
     );
+    // El comentario es una anotación manual del usuario, no viene del Excel — un
+    // re-sync (cron, o el archivo cambió) no debe borrarlo. Se preserva por código de
+    // producto antes del DELETE+INSERT.
+    const comentariosPrevios = new Map(
+      db
+        .prepare(
+          `SELECT prod.codigo AS codigo, pl.comentario AS comentario
+           FROM presupuesto_lineas pl JOIN productos prod ON prod.id = pl.producto_id
+           WHERE pl.presupuesto_id = ? AND pl.comentario IS NOT NULL AND pl.comentario != ''`
+        )
+        .all(presupuestoExistente.id)
+        .map((r) => [r.codigo, r.comentario])
+    );
     db.prepare('DELETE FROM presupuesto_lineas WHERE presupuesto_id = ?').run(presupuestoExistente.id);
-    guardarLineas(presupuestoExistente.id, datos.lineas);
+    guardarLineas(
+      presupuestoExistente.id,
+      datos.lineas.map((l) => ({ ...l, comentario: comentariosPrevios.get(l.codigo) || null }))
+    );
   });
 }
 
-function registrarPendienteEvento(rutaArchivo, datos) {
+function registrarPendienteEventoAmbiguo(rutaArchivo, datos) {
   const yaPendiente = db
-    .prepare("SELECT id FROM import_pendientes WHERE tipo = 'evento_no_encontrado' AND ruta_archivo = ? AND resuelto = 0")
+    .prepare("SELECT id FROM import_pendientes WHERE tipo = 'evento_ambiguo' AND ruta_archivo = ? AND resuelto = 0")
     .get(rutaArchivo);
   if (yaPendiente) return;
-  db.prepare("INSERT INTO import_pendientes (tipo, ruta_archivo, datos_json) VALUES ('evento_no_encontrado', ?, ?)").run(
+  db.prepare("INSERT INTO import_pendientes (tipo, ruta_archivo, datos_json) VALUES ('evento_ambiguo', ?, ?)").run(
     rutaArchivo,
     JSON.stringify(datos)
   );
+}
+
+let adminIdCache = null;
+function obtenerAdminId() {
+  if (adminIdCache) return adminIdCache;
+  const admin = db.prepare("SELECT id FROM usuarios WHERE rol = 'admin' ORDER BY id LIMIT 1").get();
+  adminIdCache = admin ? admin.id : null;
+  return adminIdCache;
 }
 
 function registrarPendientePosibleReemplazo(rutaArchivo, loteId, huerfanoId, nuevoId) {
@@ -223,7 +286,16 @@ function escanear() {
   }
 
   const rutasEscaneadas = new Set(archivos);
-  const resumen = { nuevos: 0, actualizados: 0, sinCambios: 0, pendientesEvento: 0, huerfanos: 0, errores: 0 };
+  const resumen = {
+    nuevos: 0,
+    actualizados: 0,
+    sinCambios: 0,
+    eventosCreadosSinFecha: 0,
+    pendientesEvento: 0,
+    huerfanos: 0,
+    borrados: 0,
+    errores: 0,
+  };
 
   // 1) Marcar huérfanos ANTES de crear presupuestos nuevos, para poder emparejarlos
   //    con un reemplazo que aparezca en este mismo escaneo.
@@ -235,12 +307,12 @@ function escanear() {
     }
   }
 
-  // 1.5) Limpiar pendientes 'evento_no_encontrado' obsoletos: si el archivo ya tiene un
+  // 1.5) Limpiar pendientes 'evento_ambiguo' obsoletos: si el archivo ya tiene un
   //      presupuesto (creado en este escaneo, en uno anterior, o vinculado a mano), el
   //      pendiente ya no aplica, sin importar cuándo se haya resuelto la ambigüedad.
   db.prepare(
     `UPDATE import_pendientes SET resuelto = 1, resuelto_en = datetime('now')
-     WHERE tipo = 'evento_no_encontrado' AND resuelto = 0
+     WHERE tipo = 'evento_ambiguo' AND resuelto = 0
        AND ruta_archivo IN (SELECT ruta_archivo FROM presupuestos WHERE ruta_archivo IS NOT NULL)`
   ).run();
 
@@ -280,21 +352,39 @@ function escanear() {
 
     const eventosCoincidentes = db.prepare('SELECT * FROM eventos WHERE nombre = ? COLLATE NOCASE').all(datos.evento_nombre);
 
-    if (eventosCoincidentes.length !== 1) {
-      registrarPendienteEvento(rutaArchivo, datos);
+    let evento;
+    if (eventosCoincidentes.length === 1) {
+      evento = eventosCoincidentes[0];
+    } else if (eventosCoincidentes.length > 1) {
+      // Ambiguo: el nombre matchea más de un evento (ej. una expo que se repite en el
+      // año) — no adivinamos cuál, queda pendiente de que un humano elija.
+      registrarPendienteEventoAmbiguo(rutaArchivo, datos);
       resumen.pendientesEvento++;
       continue;
+    } else {
+      // No existe ningún evento con ese nombre: se crea igual (ya no mantenemos un
+      // calendario aparte para completar fechas de antemano), con fecha pendiente —
+      // '' en vez de NULL porque la columna es NOT NULL; el resto de la app (calendario,
+      // alertas) ya trata una fecha vacía como "sin definir" sin romperse.
+      evento = eventosService.crear({
+        nombre: datos.evento_nombre,
+        lugar: null,
+        fecha_inicio: '',
+        fecha_fin: '',
+        notas: null,
+        creadoPor: obtenerAdminId(),
+      });
+      resumen.eventosCreadosSinFecha++;
     }
 
-    const evento = eventosCoincidentes[0];
     const lote = encontrarOCrearLote(evento.id, datos.lote_codigo, datos.lote_expositor);
     const presupuestoId = crearPresupuestoDesdeArchivo(lote.id, datos, rutaArchivo, stat);
     resumen.nuevos++;
 
-    // Si este archivo tenía un pendiente 'evento_no_encontrado' de un escaneo anterior
-    // (por ejemplo, la ambigüedad se resolvió renombrando un evento), queda obsoleto.
+    // Si este archivo tenía un pendiente 'evento_ambiguo' de un escaneo anterior (por
+    // ejemplo, la ambigüedad se resolvió renombrando un evento), queda obsoleto.
     db.prepare(
-      "UPDATE import_pendientes SET resuelto = 1, resuelto_en = datetime('now') WHERE tipo = 'evento_no_encontrado' AND ruta_archivo = ? AND resuelto = 0"
+      "UPDATE import_pendientes SET resuelto = 1, resuelto_en = datetime('now') WHERE tipo = 'evento_ambiguo' AND ruta_archivo = ? AND resuelto = 0"
     ).run(rutaArchivo);
 
     const huerfano = db
@@ -305,11 +395,32 @@ function escanear() {
     }
   }
 
+  // 3) Si un presupuesto quedó huérfano (su archivo ya no está en CONFIRMADO) y nunca se
+  //    emparejó con un posible reemplazo — ni en este escaneo ni en uno anterior, resuelto
+  //    o no — es que el archivo simplemente se borró de la carpeta sin que apareciera nada
+  //    nuevo para ese lote: se borra también de la app. Si SÍ quedó emparejado, su destino
+  //    ya lo maneja el flujo de 'posible_reemplazo' (se borra al resolver "es un reemplazo",
+  //    o se conserva a propósito si un humano eligió "son distintos") y no se toca acá.
+  const huerfanosSinEmparejar = db
+    .prepare(
+      `SELECT id FROM presupuestos
+       WHERE origen = 'excel' AND archivo_activo = 0
+         AND id NOT IN (
+           SELECT presupuesto_huerfano_id FROM import_pendientes
+           WHERE tipo = 'posible_reemplazo' AND presupuesto_huerfano_id IS NOT NULL
+         )`
+    )
+    .all();
+  for (const p of huerfanosSinEmparejar) {
+    db.prepare('DELETE FROM presupuestos WHERE id = ?').run(p.id);
+    resumen.borrados++;
+  }
+
   console.log('[excelImportService] Escaneo completo:', resumen);
   return { ok: true, resumen };
 }
 
-/** Materializa un pendiente de tipo 'evento_no_encontrado' contra un evento (existente o recién creado). */
+/** Materializa un pendiente de tipo 'evento_ambiguo' contra el evento que el humano eligió. */
 function materializarPendiente(pendienteId, eventoId) {
   const pendiente = db.prepare('SELECT * FROM import_pendientes WHERE id = ?').get(pendienteId);
   if (!pendiente) {
@@ -317,8 +428,8 @@ function materializarPendiente(pendienteId, eventoId) {
     err.status = 404;
     throw err;
   }
-  if (pendiente.tipo !== 'evento_no_encontrado') {
-    const err = new Error('Este pendiente no es de tipo evento_no_encontrado');
+  if (pendiente.tipo !== 'evento_ambiguo') {
+    const err = new Error('Este pendiente no es de tipo evento_ambiguo');
     err.status = 400;
     throw err;
   }

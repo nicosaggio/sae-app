@@ -25,8 +25,10 @@ export function AuthProvider({ children }) {
     setUsuario(null);
   }
 
+  const puedeEscribir = !usuario?.solo_estado;
+
   return (
-    <AuthContext.Provider value={{ usuario, cargando, login, logout }}>
+    <AuthContext.Provider value={{ usuario, cargando, login, logout, puedeEscribir }}>
       {children}
     </AuthContext.Provider>
   );
