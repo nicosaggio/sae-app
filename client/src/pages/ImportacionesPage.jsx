@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { formatearMonto } from '../format';
 
 export function ImportacionesPage() {
   const [pendientes, setPendientes] = useState([]);
@@ -231,7 +232,7 @@ function PendienteEventoAmbiguo({ pendiente, onResuelto }) {
         {d.lote_expositor ? ` (${d.lote_expositor})` : ''}
       </p>
       <p className="texto-suave">
-        Cliente: {d.cliente_nombre || '—'} · Monto: {d.monto_total ?? '—'} · {d.lineas.length} productos
+        Cliente: {d.cliente_nombre || '—'} · Monto: {formatearMonto(d.monto_total)} · {d.lineas.length} productos
       </p>
       <p className="texto-suave">Archivo: {pendiente.ruta_archivo}</p>
 
@@ -343,8 +344,8 @@ function PendientePosibleReemplazo({ pendiente, onResuelto }) {
           </tr>
           <tr>
             <td>Monto</td>
-            <td>{huerfano?.monto_total ?? '—'}</td>
-            <td>{nuevo?.monto_total ?? '—'}</td>
+            <td>{formatearMonto(huerfano?.monto_total)}</td>
+            <td>{formatearMonto(nuevo?.monto_total)}</td>
           </tr>
           <tr>
             <td>Número</td>

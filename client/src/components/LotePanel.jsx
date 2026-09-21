@@ -115,7 +115,9 @@ export function LotePanel({ lote, productos, onCambiado }) {
           </div>
           <div className="campo">
             <label>Monto total</label>
-            <input type="number" step="0.01" value={nuevoPresupuesto.monto_total} onChange={(e) => setNuevoPresupuesto({ ...nuevoPresupuesto, monto_total: e.target.value })} />
+            <div className="input-moneda">
+              <input type="number" step="0.01" value={nuevoPresupuesto.monto_total} onChange={(e) => setNuevoPresupuesto({ ...nuevoPresupuesto, monto_total: e.target.value })} />
+            </div>
           </div>
           <div className="campo" style={{ gridColumn: '1 / -1' }}>
             <label>Notas</label>

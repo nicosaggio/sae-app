@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
+import { BuscadorEvento } from '../components/BuscadorEvento';
 import { LotePanel } from '../components/LotePanel';
+import { Modal } from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 
 export function EventoDetallePage() {
@@ -10,23 +12,45 @@ export function EventoDetallePage() {
   const { puedeEscribir } = useAuth();
   const [evento, setEvento] = useState(null);
   const [productos, setProductos] = useState([]);
+  const [eventos, setEventos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [nuevoLote, setNuevoLote] = useState({ codigo: '', expositor: '', contacto: '' });
+  const [fusionAbierta, setFusionAbierta] = useState(false);
+  const [otroEventoId, setOtroEventoId] = useState(null);
+  const [fusionando, setFusionando] = useState(false);
 
   async function cargar() {
     setError('');
     try {
-      const [ev, listaProductos] = await Promise.all([
+      const [ev, listaProductos, listaEventos] = await Promise.all([
         api.get(`/eventos/${id}`),
         api.get('/productos?activo=1'),
+        api.get('/eventos'),
       ]);
       setEvento(ev);
       setProductos(listaProductos);
+      setEventos(listaEventos);
     } catch (err) {
       setError(err.message);
     } finally {
       setCargando(false);
+    }
+  }
+
+  async function unificarEventos() {
+    if (!otroEventoId) return;
+    setFusionando(true);
+    setError('');
+    try {
+      await api.post(`/eventos/${id}/fusionar`, { otroEventoId });
+      setFusionAbierta(false);
+      setOtroEventoId(null);
+      cargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFusionando(false);
     }
   }
 
@@ -66,8 +90,35 @@ export function EventoDetallePage() {
       <button onClick={() => navigate('/calendario')} style={{ marginBottom: 12 }}>
         ← Volver al calendario
       </button>
-      <h2>{evento.nombre}</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <h2>{evento.nombre}</h2>
+        {puedeEscribir && (
+          <button onClick={() => setFusionAbierta(true)}>Unificar con otro evento…</button>
+        )}
+      </div>
       {error && <div className="aviso error">{error}</div>}
+
+      {fusionAbierta && (
+        <Modal onClose={() => setFusionAbierta(false)}>
+          <h3 style={{ marginTop: 0 }}>Unificar con otro evento</h3>
+          <p className="texto-suave">
+            Elegí el evento duplicado. Sus lotes y presupuestos pasan a <strong>{evento.nombre}</strong> y el
+            evento elegido se borra. Los próximos Excel que digan su nombre van a caer en este evento.
+          </p>
+          <BuscadorEvento
+            eventos={eventos.filter((e) => e.id !== evento.id)}
+            value={otroEventoId}
+            onChange={setOtroEventoId}
+            placeholder="Buscar evento duplicado…"
+          />
+          <div className="toolbar" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
+            <button onClick={() => setFusionAbierta(false)}>Cancelar</button>
+            <button className="primario" disabled={!otroEventoId || fusionando} onClick={unificarEventos}>
+              {fusionando ? 'Unificando…' : 'Unificar'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Datos del evento</h3>

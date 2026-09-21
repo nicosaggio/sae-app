@@ -9,11 +9,12 @@ const ENLACES = [
   { to: '/presupuestos', texto: 'Presupuestos' },
   { to: '/totales', texto: 'Totales' },
   { to: '/productos', texto: 'Productos' },
+  { to: '/catalogo', texto: 'Catálogo' },
 ];
 
 export function Layout() {
   const { usuario, logout, puedeEscribir } = useAuth();
-  let enlaces = puedeEscribir ? ENLACES : ENLACES.filter((e) => e.to !== '/productos');
+  let enlaces = puedeEscribir ? ENLACES : ENLACES.filter((e) => e.to !== '/productos' && e.to !== '/catalogo');
   if (usuario?.rol === 'admin') enlaces = [...enlaces, { to: '/usuarios', texto: 'Usuarios' }];
 
   const { datos: alertas } = usePolling(() => api.get('/presupuestos/alertas'), 30000, []);

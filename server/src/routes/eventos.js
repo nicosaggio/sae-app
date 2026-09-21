@@ -78,4 +78,10 @@ router.delete('/:id', bloquearSiSoloEstado, (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/:id/fusionar', bloquearSiSoloEstado, (req, res) => {
+  const { otroEventoId } = req.body || {};
+  if (!otroEventoId) return res.status(400).json({ error: 'Falta otroEventoId' });
+  res.json(eventosService.fusionar(Number(req.params.id), Number(otroEventoId)));
+});
+
 module.exports = router;

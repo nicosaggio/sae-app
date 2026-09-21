@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const { backup } = require('node:sqlite');
 const { db, DB_DIR } = require('../db/connection');
 
-const BACKUPS_DIR = path.join(DB_DIR, 'backups');
+const BACKUPS_DIR = process.env.BACKUPS_DIR || path.join(DB_DIR, 'backups');
 const MAXIMO_BACKUPS = 30;
 
 fs.mkdirSync(BACKUPS_DIR, { recursive: true });

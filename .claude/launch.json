@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sae-app-server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:server"],
+      "port": 4001
+    },
+    {
+      "name": "sae-app-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:client"],
+      "port": 5173
+    }
+  ]
+}

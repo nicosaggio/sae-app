@@ -11,15 +11,22 @@
     "dev": "node src/index.js",
     "start": "node src/index.js",
     "migrate": "node src/db/migrate.js",
-    "seed": "node src/db/seed.js"
+    "seed": "node src/db/seed.js",
+    "seed:catalogo": "node src/db/seed-catalogo.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
+    "jimp": "^1.6.1",
+    "multer": "^2.4.0",
     "node-cron": "^3.0.3",
     "pdfkit": "^0.15.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "pdfjs-dist": "^4.10.38"
   }
 }

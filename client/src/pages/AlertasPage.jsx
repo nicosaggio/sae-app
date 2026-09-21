@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
+import { formatearMonto } from '../format';
 
 export function AlertasPage() {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ export function AlertasPage() {
                   </td>
                   <td>{a.lote_codigo}{a.lote_expositor ? ` — ${a.lote_expositor}` : ''}</td>
                   <td>{a.cliente_nombre || '—'}</td>
-                  <td>{a.monto_total ?? '—'}</td>
+                  <td>{formatearMonto(a.monto_total)}</td>
                   <td>
                     <button onClick={() => navigate(`/eventos/${a.evento_id}`)}>Ver evento</button>
                   </td>

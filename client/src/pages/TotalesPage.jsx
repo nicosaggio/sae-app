@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { BuscadorEvento } from '../components/BuscadorEvento';
-
-const formatoMoneda = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+import { formatearMonto } from '../format';
 
 export function TotalesPage() {
   const [eventos, setEventos] = useState([]);
@@ -178,7 +177,7 @@ export function TotalesPage() {
                           <td>{p.codigo || '—'}</td>
                           <td>{p.cantidad}</td>
                           <td>
-                            {formatoMoneda.format(p.subtotal)}
+                            {formatearMonto(p.subtotal)}
                             {p.lineasSinPrecio > 0 && (
                               <span className="texto-suave"> (falta precio en {p.lineasSinPrecio})</span>
                             )}
@@ -189,7 +188,7 @@ export function TotalesPage() {
                     <tfoot>
                       <tr>
                         <td colSpan={3}>Total {grupo.rubro}</td>
-                        <td>{formatoMoneda.format(grupo.subtotal)}</td>
+                        <td>{formatearMonto(grupo.subtotal)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -204,7 +203,7 @@ export function TotalesPage() {
                 <div className="toolbar" style={{ marginBottom: 0, justifyContent: 'space-between' }}>
                   <strong>Total del evento (sin IVA)</strong>
                   <strong style={{ fontSize: 18 }}>
-                    {formatoMoneda.format(facturacion.reduce((acc, g) => acc + g.subtotal, 0))}
+                    {formatearMonto(facturacion.reduce((acc, g) => acc + g.subtotal, 0))}
                   </strong>
                 </div>
               </div>

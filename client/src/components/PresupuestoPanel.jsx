@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { ESTADOS_PRESUPUESTO } from '../constants';
 import { BuscadorProducto } from './BuscadorProducto';
 import { useAuth } from '../context/AuthContext';
+import { formatearMonto } from '../format';
 
 export function PresupuestoPanel({ presupuesto, productos, onCambiado }) {
   const { puedeEscribir } = useAuth();
@@ -148,14 +149,16 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado }) {
         </div>
         <div className="campo">
           <label>Monto total</label>
-          <input
-            type="number"
-            step="0.01"
-            value={datos.monto_total ?? ''}
-            disabled={!puedeEscribir}
-            onChange={(e) => setDatos({ ...datos, monto_total: e.target.value })}
-            onBlur={(e) => guardarCampo({ monto_total: e.target.value })}
-          />
+          <div className="input-moneda">
+            <input
+              type="number"
+              step="0.01"
+              value={datos.monto_total ?? ''}
+              disabled={!puedeEscribir}
+              onChange={(e) => setDatos({ ...datos, monto_total: e.target.value })}
+              onBlur={(e) => guardarCampo({ monto_total: e.target.value })}
+            />
+          </div>
         </div>
         <div className="campo">
           <label>Estado</label>
@@ -214,15 +217,16 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado }) {
             value={nuevaLinea.cantidad}
             onChange={(e) => setNuevaLinea({ ...nuevaLinea, cantidad: e.target.value })}
           />
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Precio unitario (opcional)"
-            style={{ width: 160 }}
-            value={nuevaLinea.precio_unitario}
-            onChange={(e) => setNuevaLinea({ ...nuevaLinea, precio_unitario: e.target.value })}
-          />
+          <div className="input-moneda" style={{ width: 160 }}>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Precio unitario (opcional)"
+              value={nuevaLinea.precio_unitario}
+              onChange={(e) => setNuevaLinea({ ...nuevaLinea, precio_unitario: e.target.value })}
+            />
+          </div>
           <input
             placeholder="Comentario (opcional)"
             style={{ width: 200 }}
@@ -273,18 +277,17 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado }) {
               </td>
               <td className={linea.precio_unitario != null ? '' : 'texto-suave'}>
                 {editandoLineaId === linea.id ? (
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    style={{ width: 110 }}
-                    value={precioEditado}
-                    onChange={(e) => setPrecioEditado(e.target.value)}
-                  />
-                ) : linea.precio_unitario != null ? (
-                  linea.precio_unitario
+                  <div className="input-moneda" style={{ width: 110 }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={precioEditado}
+                      onChange={(e) => setPrecioEditado(e.target.value)}
+                    />
+                  </div>
                 ) : (
-                  '—'
+                  formatearMonto(linea.precio_unitario)
                 )}
               </td>
               <td className={linea.comentario ? '' : 'texto-suave'}>

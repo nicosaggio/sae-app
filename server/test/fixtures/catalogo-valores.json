@@ -1,0 +1,3314 @@
+{
+ "generado_desde": "CATALOGO SAE.xlsx (hoja VALORES) + 26_BASE PARCHE_P (1).xlsx (hoja BDatos)",
+ "multiplo": 100,
+ "porcentaje_global": 0.4,
+ "adicional_pie": 8900,
+ "precioBase": {
+  "PB-250": 28655,
+  "PN-250": 37330,
+  "PV-250": 114625,
+  "PC-250": 33020,
+  "PA-RPW": 86020,
+  "AV-02": 70540,
+  "CE-100": 8820,
+  "CEN-100": 18915,
+  "MO-23": 24005,
+  "TA-02": 30620,
+  "AU-01": 7715,
+  "NY-01": 1125,
+  "MM-01": 35025,
+  "MC-05": 10355,
+  "MC-07": 25675,
+  "MC-02": 9540,
+  "MS-13": 19505,
+  "MS-65": 24280,
+  "MS-27": 7030,
+  "MC-34": 25675,
+  "MM-10": 85165,
+  "MM-04": 95360,
+  "MS-99": 22010,
+  "ML-07": 86760,
+  "ML-51": 43385,
+  "GR-100": 16350,
+  "GR-03": 46515,
+  "BT-01": 107060,
+  "MC-01": 55455,
+  "MC-01P": 84450,
+  "MC-01X": 45360,
+  "MCN-11": 63780,
+  "MCN-11P": 92775,
+  "MVB-01": 97085,
+  "MVB-01P": 126085,
+  "CU-50X": 29295,
+  "CU-75X": 33700,
+  "CU-100": 50555,
+  "MSD-100X": 31550,
+  "MSD-110": 52905,
+  "EL-01": 88170,
+  "ES-01": 75535,
+  "ES-01P": 104535,
+  "ES-03": 52905,
+  "EV-04": 183885,
+  "EV-04P": 212885,
+  "EV-02B": 251775,
+  "CC-01": 117740,
+  "CC-11": 176605,
+  "IS-03": 29440,
+  "IS-04": 44155,
+  "IS-030": 58870,
+  "IS-30": 44155,
+  "IS-065": 176605,
+  "IS-70": 44155,
+  "IS-050": 117740,
+  "IS-T20": 132455,
+  "IS-031": 58870,
+  "CUA-050": 28065,
+  "MC-38": 140530,
+  "MC-131": 167555,
+  "MS-16": 38145,
+  "MS-16B": 38145
+ },
+ "items": [
+  {
+   "codigo": "PB-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "PB-250"
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PB-250 x",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PB-250",
+    "factor": 1
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PB-250 xx",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PB-250 x",
+    "factor": 1
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PB-250 xxx",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PB-250 xx",
+    "factor": 1
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PB-200",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PB-250 xxx",
+    "factor": 1
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PB-150",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PB-250",
+    "factor": 1
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PB-150x",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PB-250",
+    "factor": 1
+   },
+   "pase_excel": 28655,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PN-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "PN-250"
+   },
+   "pase_excel": 37330,
+   "sae_excel": 52300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PN-250X",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PN-250",
+    "factor": 1
+   },
+   "pase_excel": 37330,
+   "sae_excel": 52300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PN-250XX",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PN-250",
+    "factor": 1
+   },
+   "pase_excel": 37330,
+   "sae_excel": 52300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PN-250XXX",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PN-250",
+    "factor": 1
+   },
+   "pase_excel": 37330,
+   "sae_excel": 52300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PV-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "PV-250"
+   },
+   "pase_excel": 114625,
+   "sae_excel": 160500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PC-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "PC-250"
+   },
+   "pase_excel": 33020,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PC-250X",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PC-250",
+    "factor": 1
+   },
+   "pase_excel": 33020,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PC-250XX",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PC-250",
+    "factor": 1
+   },
+   "pase_excel": 33020,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PC-250XXX",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "PC-250",
+    "factor": 1
+   },
+   "pase_excel": 33020,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PA-RPW",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "PA-RPW"
+   },
+   "pase_excel": 86020,
+   "sae_excel": 120500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AVN-02",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 70404
+   },
+   "pase_excel": 70404,
+   "sae_excel": 98600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AV-02",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "AV-02"
+   },
+   "pase_excel": 70540,
+   "sae_excel": 98800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PA-CST",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "CE-050",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 1
+   },
+   "pase_excel": 8820,
+   "sae_excel": 12400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-100",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CE-100"
+   },
+   "pase_excel": 8820,
+   "sae_excel": 12400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-137",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 17635
+   },
+   "pase_excel": 17635,
+   "sae_excel": 24700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-150",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 1.5
+   },
+   "pase_excel": 13230,
+   "sae_excel": 18600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-200",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 2
+   },
+   "pase_excel": 17640,
+   "sae_excel": 24700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 2.5
+   },
+   "pase_excel": 22050,
+   "sae_excel": 30900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-300",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 3
+   },
+   "pase_excel": 26460,
+   "sae_excel": 37100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-350",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 3.5
+   },
+   "pase_excel": 30870,
+   "sae_excel": 43300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-400",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 4
+   },
+   "pase_excel": 35280,
+   "sae_excel": 49400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CE-500",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CE-100",
+    "factor": 5
+   },
+   "pase_excel": 44100,
+   "sae_excel": 61800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-050",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 1
+   },
+   "pase_excel": 18915,
+   "sae_excel": 26500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-100",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CEN-100"
+   },
+   "pase_excel": 18915,
+   "sae_excel": 26500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-137",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 1.37
+   },
+   "pase_excel": 25913.55,
+   "sae_excel": 36300,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "CEN-150",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 1.5
+   },
+   "pase_excel": 28372.5,
+   "sae_excel": 39800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-200",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 2
+   },
+   "pase_excel": 37830,
+   "sae_excel": 53000,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "CEN-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 2.5
+   },
+   "pase_excel": 47287.5,
+   "sae_excel": 66300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-300",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 3
+   },
+   "pase_excel": 56745,
+   "sae_excel": 79500,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "CEN-350",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 3.5
+   },
+   "pase_excel": 66202.5,
+   "sae_excel": 92700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-400",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 4
+   },
+   "pase_excel": 75660,
+   "sae_excel": 106000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CEN-500",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "CEN-100",
+    "factor": 5
+   },
+   "pase_excel": 94575,
+   "sae_excel": 132500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-010",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1
+   },
+   "pase_excel": 5100,
+   "sae_excel": 7200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-020",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1
+   },
+   "pase_excel": 5100,
+   "sae_excel": 7200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-030",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1
+   },
+   "pase_excel": 5100,
+   "sae_excel": 7200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-050",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1
+   },
+   "pase_excel": 5100,
+   "sae_excel": 7200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-070",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1
+   },
+   "pase_excel": 5100,
+   "sae_excel": 7200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-100",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 5100
+   },
+   "pase_excel": 5100,
+   "sae_excel": 7200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-137",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1.37
+   },
+   "pase_excel": 6987,
+   "sae_excel": 9800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-150",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 1.5
+   },
+   "pase_excel": 7650,
+   "sae_excel": 10800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-200",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 2
+   },
+   "pase_excel": 10200,
+   "sae_excel": 14300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-250",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 2.5
+   },
+   "pase_excel": 12750,
+   "sae_excel": 17900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-300",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 3
+   },
+   "pase_excel": 15300,
+   "sae_excel": 21500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-350",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 3.5
+   },
+   "pase_excel": 17850,
+   "sae_excel": 25000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-400",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 4
+   },
+   "pase_excel": 20400,
+   "sae_excel": 28600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "DL-500",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "DL-100",
+    "factor": 5
+   },
+   "pase_excel": 25500,
+   "sae_excel": 35700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MO-20XX",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 18915
+   },
+   "pase_excel": 18915,
+   "sae_excel": 26500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MO-20X",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MO-20XX",
+    "factor": 1
+   },
+   "pase_excel": 18915,
+   "sae_excel": 26500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MO-23",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MO-23"
+   },
+   "pase_excel": 24005,
+   "sae_excel": 33700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "PG-01",
+   "rubro": "SISTEMA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "TA-02",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "TA-02"
+   },
+   "pase_excel": 30620,
+   "sae_excel": 42900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-00",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 10975
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-01",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-02",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-03",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-04",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-05",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-06",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-07",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-08",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-09",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-10",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-11",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-12",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-13",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-14",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-15",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-16",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AN-17",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AN-00",
+    "factor": 1
+   },
+   "pase_excel": 10975,
+   "sae_excel": 15400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-01",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "AU-01"
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-02",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-03",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-04",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-05",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-06",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-07",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-08",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-09",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-10",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-11",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-12",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-13",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-14",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-15",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-16",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AU-17",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "AU-01",
+    "factor": 1
+   },
+   "pase_excel": 7715,
+   "sae_excel": 10900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "NY-01",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "NY-01"
+   },
+   "pase_excel": 1125,
+   "sae_excel": 1600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "TA-03",
+   "rubro": "PISOS",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-01",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MM-01"
+   },
+   "pase_excel": 35025,
+   "sae_excel": 49100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-02B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35025
+   },
+   "pase_excel": 35025,
+   "sae_excel": 49100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-02N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35025
+   },
+   "pase_excel": 35025,
+   "sae_excel": 49100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-10C",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MC-10N",
+    "factor": 1
+   },
+   "pase_excel": 42550,
+   "sae_excel": 59600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-10B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MC-10N",
+    "factor": 1
+   },
+   "pase_excel": 42550,
+   "sae_excel": 59600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-10N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 42550
+   },
+   "pase_excel": 42550,
+   "sae_excel": 59600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-05",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-05"
+   },
+   "pase_excel": 10355,
+   "sae_excel": 14500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-07",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-07"
+   },
+   "pase_excel": 25675,
+   "sae_excel": 36000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-02",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-02"
+   },
+   "pase_excel": 9540,
+   "sae_excel": 13400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-11",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MS-13",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MS-13"
+   },
+   "pase_excel": 19505,
+   "sae_excel": 27400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-65",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MS-65"
+   },
+   "pase_excel": 24280,
+   "sae_excel": 34000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-27",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MS-27"
+   },
+   "pase_excel": 7030,
+   "sae_excel": 9900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-05N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 99030
+   },
+   "pase_excel": 99030,
+   "sae_excel": 138700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-04N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 54258
+   },
+   "pase_excel": 54258,
+   "sae_excel": 76000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-13B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 11375
+   },
+   "pase_excel": 11375,
+   "sae_excel": 16000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-13N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "ML-13B",
+    "factor": 1
+   },
+   "pase_excel": 11375,
+   "sae_excel": 16000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-18B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35215
+   },
+   "pase_excel": 35215,
+   "sae_excel": 49400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-18N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35215
+   },
+   "pase_excel": 35215,
+   "sae_excel": 49400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-14B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35215
+   },
+   "pase_excel": 35215,
+   "sae_excel": 49400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-14N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-14B",
+    "factor": 1
+   },
+   "pase_excel": 35215,
+   "sae_excel": 49400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-18N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 27875
+   },
+   "pase_excel": 27875,
+   "sae_excel": 39100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-18B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 27875
+   },
+   "pase_excel": 27875,
+   "sae_excel": 39100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-25N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35945
+   },
+   "pase_excel": 35945,
+   "sae_excel": 50400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-25B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 35945
+   },
+   "pase_excel": 35945,
+   "sae_excel": 50400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-13B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 22010
+   },
+   "pase_excel": 22010,
+   "sae_excel": 30900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-13N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 22010
+   },
+   "pase_excel": 22010,
+   "sae_excel": 30900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-34",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-34"
+   },
+   "pase_excel": 25675,
+   "sae_excel": 36000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-51B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 9540
+   },
+   "pase_excel": 9540,
+   "sae_excel": 13400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-51 N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MS-51B",
+    "factor": 1
+   },
+   "pase_excel": 9540,
+   "sae_excel": 13400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-17B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 33745
+   },
+   "pase_excel": 33745,
+   "sae_excel": 47300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-17N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-17B",
+    "factor": 1
+   },
+   "pase_excel": 33745,
+   "sae_excel": 47300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-05B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 61290
+   },
+   "pase_excel": 61290,
+   "sae_excel": 85900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-05N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-05B",
+    "factor": 1
+   },
+   "pase_excel": 61290,
+   "sae_excel": 85900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-06M",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 33745
+   },
+   "pase_excel": 33745,
+   "sae_excel": 47300,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MM-06B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 33745
+   },
+   "pase_excel": 33745,
+   "sae_excel": 47300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-06N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-06B",
+    "factor": 1
+   },
+   "pase_excel": 33745,
+   "sae_excel": 47300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-10",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MM-10"
+   },
+   "pase_excel": 85165,
+   "sae_excel": 119300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-04",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MM-04"
+   },
+   "pase_excel": 95360,
+   "sae_excel": 133600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-09",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 12470
+   },
+   "pase_excel": 12470,
+   "sae_excel": 17500,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MS-99",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MS-99"
+   },
+   "pase_excel": 22010,
+   "sae_excel": 30900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-84B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 38145
+   },
+   "pase_excel": 38145,
+   "sae_excel": 53500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-84N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 38145
+   },
+   "pase_excel": 38145,
+   "sae_excel": 53500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-83N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 38145
+   },
+   "pase_excel": 38145,
+   "sae_excel": 53500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-16N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 28660
+   },
+   "pase_excel": 28660,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MT-16B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 28660
+   },
+   "pase_excel": 28660,
+   "sae_excel": 40200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-11B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 178285
+   },
+   "pase_excel": 178285,
+   "sae_excel": 249600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-10B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 111825
+   },
+   "pase_excel": 111825,
+   "sae_excel": 156600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-11N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "ML-11B",
+    "factor": 1
+   },
+   "pase_excel": 178285,
+   "sae_excel": 249600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-10N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "ML-10B",
+    "factor": 1
+   },
+   "pase_excel": 111825,
+   "sae_excel": 156600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-07",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "ML-07"
+   },
+   "pase_excel": 86760,
+   "sae_excel": 121500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-51",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "ML-51"
+   },
+   "pase_excel": 43385,
+   "sae_excel": 60800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-06",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 57310
+   },
+   "pase_excel": 57310,
+   "sae_excel": 80300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ML-08",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 89335
+   },
+   "pase_excel": 89335,
+   "sae_excel": 125100,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MM-08",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 39535
+   },
+   "pase_excel": 39535,
+   "sae_excel": 55400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-12B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 33010
+   },
+   "pase_excel": 33010,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-12N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-12B",
+    "factor": 1
+   },
+   "pase_excel": 33010,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-16B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-12N",
+    "factor": 1
+   },
+   "pase_excel": 33010,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-16N",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MM-16B",
+    "factor": 1
+   },
+   "pase_excel": 33010,
+   "sae_excel": 46300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-24B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 29850
+   },
+   "pase_excel": 29850,
+   "sae_excel": 41800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MM-91V",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 60095
+   },
+   "pase_excel": 60095,
+   "sae_excel": 84200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "LG-01",
+   "rubro": "LOGISTICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "LS-01",
+   "rubro": "LIMPIEZA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 8200
+   },
+   "pase_excel": 8200,
+   "sae_excel": 11500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-RO",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-050",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 0.5
+   },
+   "pase_excel": 8175,
+   "sae_excel": 11500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-100",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "GR-100"
+   },
+   "pase_excel": 16350,
+   "sae_excel": 22900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-137",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 1.37
+   },
+   "pase_excel": 22399.5,
+   "sae_excel": 31400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-100-150",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 1.5
+   },
+   "pase_excel": 24525,
+   "sae_excel": 34400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-200",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2
+   },
+   "pase_excel": 32700,
+   "sae_excel": 45800,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "GR-250",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2.5
+   },
+   "pase_excel": 40875,
+   "sae_excel": 57300,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "GR-300",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 3
+   },
+   "pase_excel": 49050,
+   "sae_excel": 68700,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "GR-350",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 3.5
+   },
+   "pase_excel": 57225,
+   "sae_excel": 80200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-400",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 4
+   },
+   "pase_excel": 65400,
+   "sae_excel": 91600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-500",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 5
+   },
+   "pase_excel": 81750,
+   "sae_excel": 114500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-100EA",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-050E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 0.5
+   },
+   "pase_excel": 15117.375,
+   "sae_excel": 21200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-100E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 0.65
+   },
+   "pase_excel": 30234.75,
+   "sae_excel": 42400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-137E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 1.37
+   },
+   "pase_excel": 41421.6075,
+   "sae_excel": 58000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-150E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 1.5
+   },
+   "pase_excel": 45352.125,
+   "sae_excel": 63500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-200E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 2
+   },
+   "pase_excel": 60469.5,
+   "sae_excel": 84700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-250E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 2.5
+   },
+   "pase_excel": 75586.875,
+   "sae_excel": 105900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-300E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 3
+   },
+   "pase_excel": 90704.25,
+   "sae_excel": 127000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-350E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 3.5
+   },
+   "pase_excel": 105821.625,
+   "sae_excel": 148200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-400E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 4
+   },
+   "pase_excel": 120939,
+   "sae_excel": 169400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-500E",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100E",
+    "factor": 5
+   },
+   "pase_excel": 151173.75,
+   "sae_excel": 211700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-04A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 2.5
+   },
+   "pase_excel": 116287.5,
+   "sae_excel": 162900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-04B",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-04A",
+    "factor": 0.5
+   },
+   "pase_excel": 58143.75,
+   "sae_excel": 81500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-05",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-05L",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-11",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-11A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-12",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-12A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-06",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-06A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-07",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2
+   },
+   "pase_excel": 32700,
+   "sae_excel": 45800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-07A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2
+   },
+   "pase_excel": 32700,
+   "sae_excel": 45800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-08",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-08A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-03",
+    "factor": 1
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-09",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2
+   },
+   "pase_excel": 32700,
+   "sae_excel": 45800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-09A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2
+   },
+   "pase_excel": 32700,
+   "sae_excel": 45800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-10",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-100",
+    "factor": 2
+   },
+   "pase_excel": 32700,
+   "sae_excel": 45800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-10A",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-04B",
+    "factor": 1
+   },
+   "pase_excel": 58143.75,
+   "sae_excel": 81500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-03",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "GR-03"
+   },
+   "pase_excel": 46515,
+   "sae_excel": 65200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-04C",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-04A",
+    "factor": 0.3
+   },
+   "pase_excel": 34886.25,
+   "sae_excel": 48900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-04-D",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "GR-500E",
+    "factor": 0.7
+   },
+   "pase_excel": 105821.625,
+   "sae_excel": 148200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-COR",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "BT-01",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "BT-01"
+   },
+   "pase_excel": 107060,
+   "sae_excel": 149900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "GR-BN",
+   "rubro": "GRAFICA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 250000
+   },
+   "pase_excel": 250000,
+   "sae_excel": 350000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-01",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-01"
+   },
+   "pase_excel": 55455,
+   "sae_excel": 77700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-01P",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-01P"
+   },
+   "pase_excel": 84450,
+   "sae_excel": 118300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-01X",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-01X"
+   },
+   "pase_excel": 45360,
+   "sae_excel": 63600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MCN-11",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MCN-11"
+   },
+   "pase_excel": 63780,
+   "sae_excel": 89300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MCN-11P",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MCN-11P"
+   },
+   "pase_excel": 92775,
+   "sae_excel": 129900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MVN-01",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "razon",
+    "ref": "MVB-01",
+    "ref2": "MCN-11",
+    "ref3": "MC-01"
+   },
+   "pase_excel": 111659.567217,
+   "sae_excel": 156400,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MVN-01P",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "razon",
+    "ref": "MVB-01P",
+    "ref2": "MCN-11P",
+    "ref3": "MC-01P"
+   },
+   "pase_excel": 138514.338366,
+   "sae_excel": 194000,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MVB-01",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MVB-01"
+   },
+   "pase_excel": 97085,
+   "sae_excel": 136000,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MVB-01P",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MVB-01P"
+   },
+   "pase_excel": 126085,
+   "sae_excel": 176600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MVB-02",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "MVB-01P",
+    "factor": 1.2
+   },
+   "pase_excel": 151302,
+   "sae_excel": 211900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CU-50X",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CU-50X"
+   },
+   "pase_excel": 29295,
+   "sae_excel": 41100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CU-75X",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CU-75X"
+   },
+   "pase_excel": 33700,
+   "sae_excel": 47200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CU-100",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CU-100"
+   },
+   "pase_excel": 50555,
+   "sae_excel": 70800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MSD-100X",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MSD-100X"
+   },
+   "pase_excel": 31550,
+   "sae_excel": 44200,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MSD-110",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MSD-110"
+   },
+   "pase_excel": 52905,
+   "sae_excel": 74100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "EL-01",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "EL-01"
+   },
+   "pase_excel": 88170,
+   "sae_excel": 123500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ES-01",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "ES-01"
+   },
+   "pase_excel": 75535,
+   "sae_excel": 105800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ES-01P",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "ES-01P"
+   },
+   "pase_excel": 104535,
+   "sae_excel": 146400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ES-03",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "ES-03"
+   },
+   "pase_excel": 52905,
+   "sae_excel": 74100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ES-04",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "ES-03",
+    "factor": 1
+   },
+   "pase_excel": 52905,
+   "sae_excel": 74100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "EV-04",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "EV-04"
+   },
+   "pase_excel": 183885,
+   "sae_excel": 257500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "EV-04P",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "EV-04P"
+   },
+   "pase_excel": 212885,
+   "sae_excel": 298100,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "EV-02B",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "EV-02B"
+   },
+   "pase_excel": 251775,
+   "sae_excel": 352500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "ES-02",
+   "rubro": "EQUIPAMIENTO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "ES-01",
+    "factor": 1
+   },
+   "pase_excel": 75535,
+   "sae_excel": 105800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CC-01",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CC-01"
+   },
+   "pase_excel": 117740,
+   "sae_excel": 164900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CC-11",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CC-11"
+   },
+   "pase_excel": 176605,
+   "sae_excel": 247300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-03",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-03"
+   },
+   "pase_excel": 29440,
+   "sae_excel": 41300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-04",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-04"
+   },
+   "pase_excel": 44155,
+   "sae_excel": 61900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-06",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 29440
+   },
+   "pase_excel": 29440,
+   "sae_excel": 41300,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "IS-09",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-030",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-030"
+   },
+   "pase_excel": 58870,
+   "sae_excel": 82500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-30",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-30"
+   },
+   "pase_excel": 44155,
+   "sae_excel": 61900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-065",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-065"
+   },
+   "pase_excel": 176605,
+   "sae_excel": 247300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-70",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-70"
+   },
+   "pase_excel": 44155,
+   "sae_excel": 61900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-050",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-050"
+   },
+   "pase_excel": 117740,
+   "sae_excel": 164900,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-T20",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-T20"
+   },
+   "pase_excel": 132455,
+   "sae_excel": 185500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-T16",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "IS-30",
+    "factor": 2
+   },
+   "pase_excel": 88310,
+   "sae_excel": 123700,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "RDC-01",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "CC-CN",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "FM-01",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "IS-031",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "IS-031"
+   },
+   "pase_excel": 58870,
+   "sae_excel": 82500,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "AA-00",
+   "rubro": "ELECTRICIDAD",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 462000
+   },
+   "pase_excel": 462000,
+   "sae_excel": 646800,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "TV-43",
+   "rubro": "AUDIOVISUAL",
+   "porcentaje": 1,
+   "regla": {
+    "tipo": "manual",
+    "valor": 169000,
+    "suma_adicional_pie": true
+   },
+   "pase_excel": 177900,
+   "sae_excel": 355800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "TV-50",
+   "rubro": "AUDIOVISUAL",
+   "porcentaje": 1,
+   "regla": {
+    "tipo": "manual",
+    "valor": 199900,
+    "suma_adicional_pie": true
+   },
+   "pase_excel": 208800,
+   "sae_excel": 417600,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "TV-65",
+   "rubro": "AUDIOVISUAL",
+   "porcentaje": 1,
+   "regla": {
+    "tipo": "manual",
+    "valor": 269900,
+    "suma_adicional_pie": true
+   },
+   "pase_excel": 278800,
+   "sae_excel": 557600,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "TV-50P",
+   "rubro": "AUDIOVISUAL",
+   "porcentaje": 1,
+   "regla": {
+    "tipo": "derivado",
+    "ref": "TV-50",
+    "factor": 1
+   },
+   "pase_excel": 208800,
+   "sae_excel": 417600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CUA-050",
+   "rubro": "CARPINTERIA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "CUA-050"
+   },
+   "pase_excel": 28065,
+   "sae_excel": 39300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CUA-075",
+   "rubro": "CARPINTERIA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "manual",
+    "valor": 28065
+   },
+   "pase_excel": 28065,
+   "sae_excel": 39300,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "CUA-100",
+   "rubro": "CARPINTERIA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "sin_precio"
+   },
+   "pase_excel": null,
+   "sae_excel": 0,
+   "difiere_bdatos": true
+  },
+  {
+   "codigo": "MC-43",
+   "rubro": "CARPINTERIA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "proporcional",
+    "ref": "CUA-050",
+    "num": 68100,
+    "den": 38600
+   },
+   "pase_excel": null,
+   "sae_excel": 69400,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-38",
+   "rubro": "CARPINTERIA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-38"
+   },
+   "pase_excel": 140530,
+   "sae_excel": 196800,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MC-131",
+   "rubro": "CARPINTERIA",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MC-131"
+   },
+   "pase_excel": 167555,
+   "sae_excel": 234600,
+   "difiere_bdatos": false
+  },
+  {
+   "codigo": "MS-16",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MS-16"
+   },
+   "pase_excel": null,
+   "sae_excel": null,
+   "sae_esperado": 53500,
+   "difiere_bdatos": false,
+   "nota": "sin código en el Excel (SILLA GIRATORIA BAJA (NEGRA)); código tomado de la base parche"
+  },
+  {
+   "codigo": "MS-16B",
+   "rubro": "MOBILIARIO",
+   "porcentaje": null,
+   "regla": {
+    "tipo": "base",
+    "codigo_base": "MS-16B"
+   },
+   "pase_excel": null,
+   "sae_excel": null,
+   "sae_esperado": 53500,
+   "difiere_bdatos": false,
+   "nota": "sin código en el Excel (SILLA GIRATORIA BAJA (BLANCA)); código tomado de la base parche"
+  }
+ ]
+}

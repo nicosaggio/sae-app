@@ -11,6 +11,13 @@ import { AlertasPage } from './pages/AlertasPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { ImportacionesPage } from './pages/ImportacionesPage';
 import { UsuariosPage } from './pages/UsuariosPage';
+import { CatalogoLayout } from './components/CatalogoLayout';
+import { CatalogoPage } from './pages/CatalogoPage';
+import { CatalogoItemsPage } from './pages/CatalogoItemsPage';
+import { CatalogoVersionesPage } from './pages/CatalogoVersionesPage';
+import { CatalogoTelevisoresPage } from './pages/CatalogoTelevisoresPage';
+import { CatalogoImportarPage } from './pages/CatalogoImportarPage';
+import { CatalogoAjustesPage } from './pages/CatalogoAjustesPage';
 
 function App() {
   return (
@@ -34,6 +41,14 @@ function App() {
         <Route path="productos" element={<ProductosPage />} />
         <Route path="importaciones" element={<ImportacionesPage />} />
         <Route path="usuarios" element={<UsuariosPage />} />
+        <Route path="catalogo" element={<CatalogoLayout />}>
+          <Route index element={<CatalogoPage />} />
+          <Route path="items" element={<CatalogoItemsPage />} />
+          <Route path="versiones" element={<CatalogoVersionesPage />} />
+          <Route path="televisores" element={<CatalogoTelevisoresPage />} />
+          <Route path="importar" element={<CatalogoImportarPage />} />
+          <Route path="ajustes" element={<CatalogoAjustesPage />} />
+        </Route>
       </Route>
     </Routes>
   );

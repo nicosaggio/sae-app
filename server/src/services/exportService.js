@@ -20,7 +20,10 @@ function obtenerLotesParaExport(db, eventoId, rubrosFiltro) {
     sql += ` AND COALESCE(prod.rubro, 'Sin rubro') IN (${rubrosFiltro.map(() => '?').join(',')})`;
     params.push(...rubrosFiltro);
   }
-  sql += ' ORDER BY l.codigo, prod.rubro, prod.nombre';
+  // Orden numérico natural (1, 2, 3… 10, 11) en vez de alfabético (1, 10, 11… 2, 3):
+  // CAST a INTEGER toma el número inicial del código ("23C" -> 23, "-" -> 0) como
+  // criterio principal, y el código completo como desempate para el resto.
+  sql += ' ORDER BY CAST(l.codigo AS INTEGER), l.codigo, prod.rubro, prod.nombre';
   const filas = db.prepare(sql).all(...params);
 
   const lotesMapa = new Map();
@@ -68,6 +71,26 @@ const ANCHO_NOMBRE = COL_CODIGO - COL_PRODUCTO - 10;
 // Los productos van con sangría respecto del título del rubro, para que se lea como
 // contenido "dentro" del rubro y no al mismo nivel que el encabezado de sección.
 const SANGRIA_PRODUCTO = 14;
+// Mismo violeta de marca que usa el resto de la app, para que el nombre del rubro
+// resalte — solo la palabra (texto en negrita+color con fondo leve, sin ocupar el
+// renglón entero como el título del lote).
+const COLOR_RUBRO = '#8b5892';
+const COLOR_RUBRO_FONDO = '#f3e9f4';
+
+/** Dibuja el nombre del rubro en negrita+violeta con un fondo leve recortado al ancho
+ *  exacto de la palabra (no de todo el renglón). Deja doc.y al final del texto. */
+function rubroResaltado(doc, texto, x, fontSize) {
+  doc.font('Helvetica-Bold').fontSize(fontSize);
+  const ancho = doc.widthOfString(texto);
+  const alto = doc.currentLineHeight();
+  const y = doc.y;
+  const padX = 4;
+  const padY = 2;
+  doc.rect(x - padX, y - padY, ancho + padX * 2, alto + padY * 2).fill(COLOR_RUBRO_FONDO);
+  doc.fillColor(COLOR_RUBRO).text(texto, x, y);
+  doc.font('Helvetica').fillColor('#000');
+  doc.y = y + alto;
+}
 
 /** Nombres de producto largos ocupan varias líneas — hay que sumar esa altura real,
  *  si no la fila siguiente se dibuja encima de la cola del texto envuelto. */
@@ -133,7 +156,7 @@ function dibujarLote(doc, lote) {
 
   let subtotal = 0;
   for (const grupoRubro of lote.rubros) {
-    doc.fontSize(10).fillColor('#374151').text(grupoRubro.rubro, COL_PRODUCTO);
+    rubroResaltado(doc, grupoRubro.rubro, COL_PRODUCTO, 10);
     doc.moveDown(0.2);
     encabezadoTabla(doc);
     for (const producto of grupoRubro.productos) {
@@ -164,7 +187,7 @@ function dibujarTotalesEvento(doc, totales) {
     const alturaEstimada = 40 + alturaProductos(doc, grupo.productos);
     if (doc.y + alturaEstimada > doc.page.height - doc.page.margins.bottom) doc.addPage();
 
-    doc.fontSize(12).fillColor('#1d4ed8').text(grupo.rubro);
+    rubroResaltado(doc, grupo.rubro, COL_PRODUCTO, 12);
     doc.moveDown(0.3);
     encabezadoTabla(doc);
     for (const producto of grupo.productos) {

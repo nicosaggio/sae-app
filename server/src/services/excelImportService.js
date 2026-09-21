@@ -350,7 +350,19 @@ function escanear() {
       continue;
     }
 
-    const eventosCoincidentes = db.prepare('SELECT * FROM eventos WHERE nombre = ? COLLATE NOCASE').all(datos.evento_nombre);
+    let eventosCoincidentes = db.prepare('SELECT * FROM eventos WHERE nombre = ? COLLATE NOCASE').all(datos.evento_nombre);
+    if (eventosCoincidentes.length === 0) {
+      // Nombre no matchea directo: puede ser un evento que ya se unificó con otro bajo un
+      // nombre distinto (ver eventosService.fusionar) — el alias lo redirige sin volver a
+      // crear el duplicado.
+      const porAlias = db
+        .prepare(
+          `SELECT e.* FROM eventos_alias a JOIN eventos e ON e.id = a.evento_id
+           WHERE a.nombre = ? COLLATE NOCASE`
+        )
+        .get(datos.evento_nombre);
+      if (porAlias) eventosCoincidentes = [porAlias];
+    }
 
     let evento;
     if (eventosCoincidentes.length === 1) {

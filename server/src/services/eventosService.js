@@ -1,4 +1,4 @@
-const { db } = require('../db/connection');
+const { db, transaction } = require('../db/connection');
 
 const SELECT_EVENTO = `
   SELECT e.*, u.nombre_completo AS creado_por_nombre, u.nombre_usuario AS creado_por_usuario
@@ -91,6 +91,49 @@ function eliminar(id) {
   db.prepare('DELETE FROM eventos WHERE id = ?').run(id);
 }
 
+/**
+ * Unifica `origenId` dentro de `destinoId`: mueve todos sus lotes (y presupuestos) al
+ * evento destino y borra el evento origen. Si un código de lote ya existe en destino
+ * (mismo stand cargado en ambos, típico de una expo duplicada), los presupuestos del
+ * lote origen se reasignan al lote existente en vez de duplicarlo.
+ * Deja un alias con el nombre del evento absorbido para que un import de Excel que
+ * todavía diga ese nombre (archivos viejos, o la carpeta de red antes de renombrarse)
+ * siga cayendo en el evento destino en vez de volver a crear el duplicado.
+ */
+function fusionar(destinoId, origenId) {
+  if (destinoId === origenId) {
+    const err = new Error('No se puede unificar un evento consigo mismo');
+    err.status = 400;
+    throw err;
+  }
+  const destino = db.prepare('SELECT * FROM eventos WHERE id = ?').get(destinoId);
+  const origen = db.prepare('SELECT * FROM eventos WHERE id = ?').get(origenId);
+  if (!destino || !origen) {
+    const err = new Error('Evento no encontrado');
+    err.status = 404;
+    throw err;
+  }
+
+  transaction(() => {
+    const lotesOrigen = db.prepare('SELECT * FROM lotes WHERE evento_id = ?').all(origenId);
+    for (const lote of lotesOrigen) {
+      const colision = db.prepare('SELECT id FROM lotes WHERE evento_id = ? AND codigo = ?').get(destinoId, lote.codigo);
+      if (colision) {
+        db.prepare('UPDATE presupuestos SET lote_id = ? WHERE lote_id = ?').run(colision.id, lote.id);
+        db.prepare('DELETE FROM lotes WHERE id = ?').run(lote.id);
+      } else {
+        db.prepare('UPDATE lotes SET evento_id = ? WHERE id = ?').run(destinoId, lote.id);
+      }
+    }
+
+    db.prepare('UPDATE eventos_alias SET evento_id = ? WHERE evento_id = ?').run(destinoId, origenId);
+    db.prepare('INSERT OR IGNORE INTO eventos_alias (evento_id, nombre) VALUES (?, ?)').run(destinoId, origen.nombre);
+    db.prepare('DELETE FROM eventos WHERE id = ?').run(origenId);
+  });
+
+  return obtenerDetalle(destinoId);
+}
+
 /** Agrupa filas {rubro, producto_codigo, producto_nombre, cantidad} en [{rubro, productos, subtotal}]. */
 function agruparPorRubro(filas) {
   const mapa = new Map();
@@ -176,6 +219,7 @@ module.exports = {
   crear,
   actualizar,
   eliminar,
+  fusionar,
   totalesPorEvento,
   agruparPorRubro,
   facturacionPorEvento,
