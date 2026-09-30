@@ -121,6 +121,7 @@ export function TotalesPage() {
               {totales.map((grupo) => (
                 <div key={grupo.rubro} style={{ marginBottom: 12, opacity: rubrosExcluidos.has(grupo.rubro) ? 0.4 : 1 }}>
                   <strong>{grupo.rubro}</strong>
+                  <div className="tabla-scroll">
                   <table>
                     <thead>
                       <tr>
@@ -139,6 +140,7 @@ export function TotalesPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   <p className="texto-suave">
                     Subtotal {grupo.rubro}: {grupo.subtotal} unidades
                   </p>
@@ -161,6 +163,7 @@ export function TotalesPage() {
               {facturacion.map((grupo) => (
                 <div key={grupo.rubro} style={{ marginBottom: 12 }}>
                   <strong>{grupo.rubro}</strong>
+                  <div className="tabla-scroll">
                   <table>
                     <thead>
                       <tr>
@@ -192,6 +195,7 @@ export function TotalesPage() {
                       </tr>
                     </tfoot>
                   </table>
+                  </div>
                   {grupo.lineasSinPrecio > 0 && (
                     <p className="texto-suave" style={{ marginTop: 4 }}>
                       {grupo.lineasSinPrecio} línea(s) sin precio cargado, no incluidas en el total.

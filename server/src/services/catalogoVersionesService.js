@@ -5,6 +5,7 @@
  */
 const { db, transaction } = require('../db/connection');
 const calculo = require('./catalogoCalculoService');
+const { normalizarCodigo } = require('./catalogoPreciosService');
 
 const { errorHttp, validarPorcentaje, validarFechaIso } = calculo;
 const tiene = (obj, clave) => obj !== null && typeof obj === 'object' && Object.prototype.hasOwnProperty.call(obj, clave);
@@ -15,6 +16,24 @@ function nombreValido(valor, idPropio = null) {
   if (nombre.length > 80) throw errorHttp(400, 'El nombre de la versión no puede pasar de 80 caracteres');
   const repetida = db.prepare('SELECT id FROM catalogo_versiones WHERE nombre = ? COLLATE NOCASE AND id <> ?').get(nombre, idPropio === null ? -1 : idPropio);
   if (repetida) throw errorHttp(400, `Ya existe una versión llamada "${nombre}"`);
+  return nombre;
+}
+
+/** "DD/MM/AAAA" de hoy, para el nombre automático de un historial. */
+function hoyCorto() {
+  const hoy = new Date();
+  const dos = (n) => String(n).padStart(2, '0');
+  return `${dos(hoy.getDate())}/${dos(hoy.getMonth() + 1)}/${hoy.getFullYear()}`;
+}
+
+/** Si el nombre ya existe, le agrega "(2)", "(3)"... hasta encontrar uno libre. */
+function nombreHistorialUnico(base) {
+  let nombre = base;
+  let n = 2;
+  while (db.prepare('SELECT id FROM catalogo_versiones WHERE nombre = ? COLLATE NOCASE').get(nombre)) {
+    nombre = `${base} (${n})`;
+    n += 1;
+  }
   return nombre;
 }
 
@@ -46,6 +65,8 @@ function armarVersion(version, contexto) {
     fecha_vigencia: version.fecha_vigencia,
     pie_legal: version.pie_legal,
     es_general: version.es_general,
+    es_historial: version.es_historial,
+    origen_archivo: version.origen_archivo,
     creado_en: version.creado_en,
     items_con_precio: conteo.con_precio || 0,
     items_sin_precio: conteo.sin_precio || 0,
@@ -84,15 +105,21 @@ function crearVersion(datos = {}) {
   });
 }
 
-/** Copia parámetros y foto de precios tal cual (no recalcula: el duplicado sale igual que el original). */
+/**
+ * Copia parámetros y foto de precios tal cual (no recalcula: el duplicado sale igual que el original).
+ * Duplicar la General (o un historial) da como resultado otra versión "del historial" — fija, no se
+ * recalcula sola con una base parche nueva: es justamente cómo se guarda una versión vieja con nombre.
+ * Duplicar una versión de evento da otra versión de evento normal.
+ */
 function duplicarVersion(id, datos = {}) {
   const origen = requerirVersion(id);
   const nombre = nombreValido(tiene(datos, 'nombre') ? datos.nombre : `${origen.nombre} (copia)`);
+  const esHistorial = origen.es_general || origen.es_historial ? 1 : 0;
   return transaction(() => {
     const nuevoId = Number(
       db
-        .prepare('INSERT INTO catalogo_versiones (nombre, porcentaje_global, aplicar_a_todos, fecha_vigencia, pie_legal) VALUES (?, ?, ?, ?, ?)')
-        .run(nombre, origen.porcentaje_global, origen.aplicar_a_todos, origen.fecha_vigencia, origen.pie_legal).lastInsertRowid
+        .prepare('INSERT INTO catalogo_versiones (nombre, porcentaje_global, aplicar_a_todos, fecha_vigencia, pie_legal, es_historial) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(nombre, origen.porcentaje_global, origen.aplicar_a_todos, origen.fecha_vigencia, origen.pie_legal, esHistorial).lastInsertRowid
     );
     db.prepare(
       `INSERT INTO catalogo_version_precios (version_id, item_id, pase_parche, porcentaje, sae, estado_precio)
@@ -102,8 +129,56 @@ function duplicarVersion(id, datos = {}) {
   });
 }
 
+/**
+ * Guarda la lista General de HOY como una versión del historial, con nombre. Es la misma operación que
+ * "duplicar la General" (queda fija: no se toca con una base parche nueva ni se puede editar el
+ * porcentaje), pensada para llamarse a mano desde la pantalla de Versiones o sola al confirmar una base
+ * parche nueva. Si la General todavía no tiene ningún precio calculado (recién instalada, sin sembrar)
+ * no guarda nada y devuelve null: no tiene sentido una foto vacía.
+ */
+function guardarHistorialGeneral(datos = {}) {
+  const general = db.prepare('SELECT id FROM catalogo_versiones WHERE es_general = 1').get();
+  const tieneFotos = db.prepare('SELECT COUNT(*) AS n FROM catalogo_version_precios WHERE version_id = ?').get(general.id).n > 0;
+  if (!tieneFotos) return null;
+  const nombre = tiene(datos, 'nombre') ? datos.nombre : nombreHistorialUnico(`General ${hoyCorto()}`);
+  return duplicarVersion(general.id, { nombre });
+}
+
+/**
+ * Crea una versión con precios importados de un archivo (una planilla de presupuesto de un evento
+ * puntual, ver catalogoListaPreciosService): el precio de cada ítem es el que trae el archivo, TAL
+ * CUAL — no se recalcula con la base ni con un porcentaje. Un código del catálogo que no está en el
+ * archivo (o vino en 0) queda "sin precio". Queda fija, igual que el historial de la General.
+ */
+function crearVersionImportada({ nombre, lista, aplicarATodos = false, fechaVigencia, pieLegal, porcentajeReferencia, origenArchivo }) {
+  const nombreOk = nombreValido(nombre);
+  const fecha = fechaVigencia ? validarFechaIso(fechaVigencia, 'La fecha de vigencia') : calculo.leerAjustes().fechaVigencia;
+  const porcentaje = validarPorcentaje(porcentajeReferencia ?? 0, 'El porcentaje de referencia');
+  return transaction(() => {
+    const id = Number(
+      db
+        .prepare('INSERT INTO catalogo_versiones (nombre, porcentaje_global, aplicar_a_todos, fecha_vigencia, pie_legal, es_historial, origen_archivo) VALUES (?, ?, ?, ?, ?, 1, ?)')
+        .run(nombreOk, porcentaje, aplicarATodos ? 1 : 0, fecha, pieValido(pieLegal), origenArchivo || null).lastInsertRowid
+    );
+    const insertar = db.prepare('INSERT INTO catalogo_version_precios (version_id, item_id, pase_parche, porcentaje, sae, estado_precio) VALUES (?, ?, NULL, NULL, ?, ?)');
+    for (const item of calculo.leerItems()) {
+      const crudo = lista.precios.get(normalizarCodigo(item.codigo));
+      const conPrecio = typeof crudo === 'number' && crudo > 0;
+      insertar.run(id, item.id, conPrecio ? Math.round(crudo) : null, conPrecio ? 'ok' : 'sin_precio');
+    }
+    return obtenerVersion(id);
+  });
+}
+
 function actualizarVersion(id, datos = {}) {
   const actual = requerirVersion(id);
+  // El porcentaje y "aplicar a todos" recalcularían los precios (ver más abajo): eso es lo que no se
+  // puede tocar en una foto fija. La vigencia y el pie legal son sólo texto del PDF, no afectan el
+  // precio de nada: se pueden corregir aunque la versión sea del historial o esté importada.
+  if (actual.es_historial && ['porcentaje_global', 'aplicar_a_todos'].some((campo) => tiene(datos, campo))) {
+    const motivo = actual.origen_archivo ? `importada de "${actual.origen_archivo}"` : 'guardada del historial de la General';
+    throw errorHttp(400, `Esta es una versión ${motivo}: es una foto fija y no se le puede cambiar el porcentaje. Se le puede cambiar el nombre, la vigencia y el pie legal.`);
+  }
   const sets = {};
   if (tiene(datos, 'nombre')) {
     if (actual.es_general && String(datos.nombre).trim() !== actual.nombre) throw errorHttp(400, 'La versión General no se puede renombrar');
@@ -138,11 +213,31 @@ function eliminarVersion(id) {
 
 /** Vuelve a calcular la versión con las reglas y la base de hoy (para una versión de evento, después de editar reglas). */
 function recalcularVersion(id) {
-  requerirVersion(id);
+  const version = requerirVersion(id);
+  if (version.es_historial) {
+    const motivo = version.origen_archivo ? `importada de "${version.origen_archivo}"` : 'guardada del historial de la General';
+    throw errorHttp(400, `Esta es una versión ${motivo}: es una foto fija y no se recalcula.`);
+  }
   return transaction(() => {
     calculo.recalcularVersion(id);
     return obtenerVersion(id);
   });
 }
 
-module.exports = { listarVersiones, obtenerVersion, crearVersion, duplicarVersion, actualizarVersion, eliminarVersion, recalcularVersion };
+/** Valida un nombre de versión (obligatorio, largo, no repetido) sin crear nada. Para validar antes de un paso previo (por ejemplo, antes de leer un archivo grande). */
+function validarNombreNuevo(nombre) {
+  nombreValido(nombre);
+}
+
+module.exports = {
+  listarVersiones,
+  obtenerVersion,
+  crearVersion,
+  duplicarVersion,
+  guardarHistorialGeneral,
+  crearVersionImportada,
+  validarNombreNuevo,
+  actualizarVersion,
+  eliminarVersion,
+  recalcularVersion,
+};

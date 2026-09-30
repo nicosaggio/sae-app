@@ -138,6 +138,13 @@ export function CatalogoImportarPage() {
         <div>
           <div className="aviso exito">
             <strong>Actualización aplicada.</strong> {aplicado.resumen.itemsConCambios} ítems cambiaron de precio. Se hizo un backup de la base antes de guardar.
+            {aplicado.historial_version && (
+              <>
+                {' '}
+                La lista de precios de antes quedó guardada como{' '}
+                <a href="/catalogo/versiones">"{aplicado.historial_version.nombre}"</a>.
+              </>
+            )}
           </div>
           <ReporteCatalogo reporte={aplicado} />
         </div>
@@ -145,6 +152,7 @@ export function CatalogoImportarPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Historial</h3>
+        <div className="tabla-scroll">
         <table>
           <thead>
             <tr>
@@ -152,6 +160,7 @@ export function CatalogoImportarPage() {
               <th>Archivo</th>
               <th>Usuario</th>
               <th className="num">Ítems afectados</th>
+              <th>Precios de antes</th>
               <th></th>
             </tr>
           </thead>
@@ -163,19 +172,29 @@ export function CatalogoImportarPage() {
                 <td className="texto-suave">{h.usuario || 'siembra por línea de comandos'}</td>
                 <td className="num">{h.items_afectados}</td>
                 <td>
+                  {h.historial_version_id ? (
+                    <a href="/catalogo/versiones" title="Ver en Versiones → Historial de la General">
+                      {h.historial_version_nombre}
+                    </a>
+                  ) : (
+                    <span className="texto-suave">—</span>
+                  )}
+                </td>
+                <td>
                   <button onClick={() => verDetalle(h.id)}>Ver reporte</button>
                 </td>
               </tr>
             ))}
             {historial.length === 0 && (
               <tr>
-                <td colSpan={5} className="texto-suave">
+                <td colSpan={6} className="texto-suave">
                   Todavía no hay importaciones.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {detalle && (

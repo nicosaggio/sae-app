@@ -97,6 +97,12 @@ Nueva regla → Puerto → TCP 4001 → Permitir conexión.)
 http://IP_DE_LA_PC_SERVIDOR:4001
 ```
 
+La misma dirección funciona desde el navegador de un **celular** conectado a la misma red: la
+pantalla se adapta sola (el menú lateral pasa a un botón "☰" arriba a la izquierda, las tablas
+anchas scrollean dentro de su tarjeta en vez de romper la página, los modales ocupan toda la
+pantalla, y los botones/campos son más grandes para tocar con el dedo). No hace falta nada
+especial del lado del servidor.
+
 ---
 
 ## 5) Arranque automático al reiniciar Windows (Programador de Tareas)
@@ -122,8 +128,8 @@ Backup automático **todos los días a las 3:00 AM** (con el servidor prendido a
 `server/data/backups/`, conservando los últimos 30. Cada uno es un `.db` independiente que se
 puede copiar aparte como respaldo extra.
 
-> **Las fotos del catálogo no entran en este backup** (solo se copia el `.db`). Ver la
-> sección 8.5.
+> **Las fotos del catálogo y los adjuntos de los presupuestos (croquis, planos) no entran en
+> este backup** (solo se copia el `.db`). Ver las secciones 8.5 y 9.4.
 
 ---
 
@@ -213,7 +219,10 @@ npm run seed:catalogo --workspace=server -- "C:\ruta\CATALOGO SAE.xlsx" "C:\ruta
    se recalculan. La revisión vale 30 minutos; si subís otro archivo, reemplaza a la anterior.
 3. Si está bien, **"Confirmar y aplicar"**. Recién ahí se hace un **backup de la base**, se
    guardan los precios nuevos y se recalculan la versión General **y todas las versiones de
-   evento**. Queda registrado en el historial (archivo, usuario y reporte).
+   evento** (las versiones del historial de la General, ver 8.5, no se tocan: son una foto
+   fija). Antes de recalcular, se guarda sola una versión con la lista de precios de la General
+   tal como estaba, para no perderla. Queda todo registrado en el historial (archivo, usuario,
+   reporte y un enlace a esa versión guardada).
 
 La aplicación recuerda la última base cargada. Si un código aparece vacío, con texto o en cero
 en `BDatos`, el ítem queda **sin precio** ("S / P"); si el código directamente desapareció de
@@ -236,12 +245,48 @@ Cómo se comporta una versión de evento:
   imprimiendo lo mismo. Por eso se puede reimprimir igual meses después.
 - Si editás ítems o reglas, la General se recalcula pero las versiones de evento quedan
   marcadas **"desactualizadas"** hasta que uses **"Recalcular"**.
-- Una base parche nueva sí recalcula todas (con aviso antes de confirmar).
+- Una base parche nueva sí recalcula todas (con aviso antes de confirmar); las del historial de
+  la General (8.5) son la excepción, porque son justamente la foto que no se quiere que cambie.
 - **"Duplicar"** hace una copia exacta de los precios de otra versión.
 - La versión **General** siempre existe, no se puede borrar ni renombrar y su porcentaje es el
   "porcentaje por defecto" de Ajustes (40 % de origen).
 
-### 8.5) Dónde viven las fotos (y por qué hay que respaldarlas)
+### 8.5) Historial y versiones fijas (guardadas o importadas de un archivo)
+
+En **Catálogo → Versiones**, debajo de la tabla principal, hay una sección **"Historial y
+versiones fijas"** con dos formas de tener una lista de precios que no se mueve sola:
+
+**A) Guardar una foto de la lista General, con nombre.** La General (la del 40 %, el
+"presupuesto general de SAE") se puede guardar en distintos momentos, para volver a verla o
+usarla más adelante — por ejemplo, para saber qué precio tenía un ítem el mes pasado, o para
+cotizarle a un cliente con la lista vieja.
+- **Se guarda sola**, con un nombre automático (`General DD/MM/AAAA`; si ya existe ese nombre,
+  se le agrega "(2)"), cada vez que se confirma una base parche con cambios reales — justo antes
+  de recalcular, para no perder la lista anterior. Si la base no cambió nada, no guarda una foto
+  de más.
+- **También se puede guardar a mano, en cualquier momento**, con **"+ Guardar la versión de
+  hoy"**, poniéndole el nombre que quieras.
+
+**B) Importar los precios finales de un archivo, para un evento puntual.** Con **"Importar una
+versión desde un archivo"** (sólo administradores), subís una de las planillas de presupuesto de
+siempre (hoja **DATOS**, con `COD`, `DESCRIPCION` y una columna de precio que empiece con
+`SAE...` — por ejemplo `SAE CIDEL`) y se crea una versión con **exactamente esos precios**, sin
+aplicarles ningún porcentaje ni recalcular nada. Primero se muestra un reporte (con precio /
+sin precio / códigos que no existen en el catálogo / repetidos) y recién al confirmar se crea. Un
+código del catálogo que no está en el archivo, o que vino en 0, queda "S / P" en esa versión.
+
+Cómo se comportan las dos:
+- Quedan **fijas**: no cambia el porcentaje ni la vigencia, y no se recalculan solas (ni con una
+  base parche nueva ni al editar un ítem). Se les puede cambiar el nombre y se pueden borrar; sí
+  se pueden exportar a PDF y usar como lista de precios de un presupuesto (ver 9.1).
+- Se seleccionan en **Vista** y en la lista de precios de un presupuesto, agrupadas aparte como
+  "Historial de la General"; y se administran (guardar/importar, renombrar, borrar) en
+  **Versiones**. Las importadas de un archivo se distinguen con la etiqueta "Importada" y el
+  nombre del archivo.
+- Al confirmar una base parche, el historial de importaciones (8.3) enlaza directo a la versión
+  de la General que se guardó en ese momento.
+
+### 8.6) Dónde viven las fotos (y por qué hay que respaldarlas)
 
 Las fotos y el logo se guardan como archivos en **`server/data/catalogo-img/`** (se puede
 mover con la variable `CATALOGO_IMG_DIR` en `server/.env`). Cada foto se reduce a 800 px, por
@@ -253,7 +298,7 @@ eso el PDF completo pesa unos 5 MB.
 
 Para cambiar la foto de un ítem: **Ítems → "Ficha"** del ítem → campo "Foto" → guardar.
 
-### 8.6) Cómo se calcula cada precio
+### 8.7) Cómo se calcula cada precio
 
 `SAE = pase parche × (1 + porcentaje)`, redondeado **hacia arriba** a múltiplos de $100 (el
 múltiplo se cambia en Ajustes). Cada ítem tiene una regla:
@@ -274,14 +319,14 @@ múltiplo se cambia en Ajustes). Cada ítem tiene una regla:
 - La ficha de cada ítem muestra de quién depende y qué ítems recalcula si cambia su precio.
   Las dependencias circulares se detectan y se marcan con error en lugar de calcularse.
 
-### 8.7) Tipografías del PDF
+### 8.8) Tipografías del PDF
 
 El PDF usa **Carlito** (libre, métricamente igual a Calibri), incluida en
 `server/assets/fonts/`. El Excel usa **Aptos Narrow** para las etiquetas, los precios y el pie;
 no es una fuente libre, por eso no se incluye y esas partes salen en Carlito Bold. Si la tenés,
 copiá `AptosNarrow-Bold.ttf` en esa carpeta y se usa sola.
 
-### 8.8) Tests
+### 8.9) Tests
 
 ```bash
 npm test --workspace=server
@@ -299,7 +344,129 @@ npm test --workspace=server
 
 ---
 
-## 9) Resumen operativo del día a día
+## 9) Presupuestos cargados desde la app
+
+Además de los presupuestos que entran desde el Excel, se pueden armar directamente en la app con
+los precios del catálogo e imprimir en PDF. Se hace desde **Presupuestos → "+ Nuevo presupuesto"**.
+
+Cada presupuesto tiene tres estados:
+- **Pendiente de confirmación**: se está armando o ya se le mandó al cliente. Es invisible para el
+  resto de la app: no aparece en el calendario, los totales, las alertas, el export del evento ni
+  lo toca el import de Excel.
+- **Confirmado**: cuando el cliente acepta, se confirma con un botón y pasa a formar parte del
+  evento. Desde ahí es un presupuesto más y funciona con todo lo que ya existía.
+- **Rechazado**: cuando el cliente no lo acepta, se marca como rechazado con un botón en vez de
+  borrarlo, así queda como registro (quién y cuándo lo rechazó). Queda de sólo lectura y se puede
+  **reabrir** (vuelve a pendiente y editable) si el cliente cambia de opinión. Desde rechazado sí
+  se puede eliminar del todo si hace falta.
+
+La ventana **Presupuestos** tiene el filtro **Confirmación: Confirmados / No confirmados /
+Rechazados / Todos**. Por defecto muestra "Confirmados", igual que antes.
+
+### 9.1) Cómo se arma un presupuesto
+
+1. **Datos**: los de la hoja CARGA del Excel (expo, tipo, lote, nombre del stand, razón social,
+   CUIT, dirección, contacto, mail, teléfono) y con qué **lista de precios** arranca (la General
+   por defecto, una versión de evento, o una del historial de la General — ver 8.4 y 8.5 — por
+   ejemplo para cotizar con una lista vieja). **Todos son opcionales**. La expo se busca entre
+   los eventos de la app. El responsable (quien lo carga) y la fecha se completan solos.
+2. **Ítems**: se buscan en el catálogo por código o descripción y se elige la cantidad. El precio
+   sale de la lista de precios elegida y se copia al presupuesto: no cambia si después se
+   actualiza la base. La lista se puede volver a cambiar más adelante desde "Ítems" (se
+   recalculan todos los ítems ya cargados con la lista nueva). Un precio se puede corregir a
+   mano, y un ítem sin precio en la lista hay que completarlo a mano.
+3. **Totales**: subtotal, IVA 21 % y total. Los precios del catálogo no incluyen IVA. Se le puede
+   poner un **descuento especial** (un porcentaje) que se resta del subtotal **antes** de calcular
+   el IVA; con descuento el recuadro de totales (y el PDF) muestran el desglose completo: subtotal,
+   descuento, subtotal con descuento, IVA y total. Sin descuento (el valor por defecto) no cambia
+   nada de lo que ya había.
+4. **Croquis y planos** (opcional, ver 9.4).
+5. **PDF**: "Ver PDF" lo abre en el navegador y "Descargar PDF" lo baja. Tiene el logo, los datos
+   del cliente y del stand, la tabla de ítems, el recuadro de totales, las condiciones y la
+   numeración "Página x de y". Vence a los 4 días de la fecha de carga.
+6. **Confirmar**, cuando el cliente acepta.
+
+También se puede **duplicar** un presupuesto en cualquier estado (copia los datos, los ítems y
+los adjuntos), **marcar como rechazado** uno pendiente, **reabrir** uno rechazado, y **eliminar**
+uno pendiente o rechazado (uno confirmado no, porque ya es parte del evento). El duplicado toma
+**el siguiente número de presupuesto del mismo cliente** (si el original es `AE15ST1-1`, la copia
+es `AE15ST1-2`). Para eso conserva al responsable del original, porque el ID de cliente incluye la
+última letra del responsable; de todos modos queda registrado quién lo duplicó.
+
+### 9.2) ID de cliente y número de presupuesto
+
+Salen solos, con la misma fórmula que usa hoy el Excel: primera letra de la expo + última del
+tipo + última del nombre del stand + última del responsable + dos primeras del nombre del stand +
+dos últimas del lote, en mayúsculas (por ejemplo `AE15ST1`). Aparece cuando están cargados y
+guardados la expo, el tipo, el lote y el nombre del stand. El **número de presupuesto** es
+correlativo por cliente y el **código de facturación** es el ID más el número (`AE15ST1-2`).
+
+### 9.3) Qué pasa al confirmar
+
+Hacen falta el evento, el número de stand (lote), al menos un ítem y que todos tengan precio; si
+falta algo, la pantalla dice qué. Al confirmar:
+- Se busca o crea el lote del evento (con el número y el nombre del stand).
+- Se crea el presupuesto del evento, marcado con origen **App**, en estado "Pendiente de
+  facturar", con el total con IVA como monto, y sus ítems con el precio unitario (sin IVA), como
+  hacen los que vienen del Excel.
+- El presupuesto original queda **cerrado**: para cambiarlo se edita dentro del evento. Desde la
+  ventana Presupuestos, al abrir uno de origen App hay un enlace al original (PDF y adjuntos).
+
+Conviene **no cargar el mismo stand también como Excel** en la carpeta CONFIRMADO: quedaría
+duplicado.
+
+### 9.4) Croquis y planos adjuntos
+
+Cada presupuesto admite hasta 10 adjuntos: imágenes **JPG o PNG** y archivos **PDF** de hasta
+25 MB cada uno. Se aceptan por su contenido real (no por la extensión); no se aceptan PDF con
+contraseña ni archivos dañados. Las fotos grandes se reducen a 2.400 px y las de celular se
+enderezan.
+
+Salen como **anexos al final del PDF del presupuesto**, en el orden en que se cargaron: cada
+imagen en su página (apaisada si la imagen lo es) con su título, y los PDF página por página. La
+numeración "Página x de y" cuenta todo el documento. A cada adjunto se le puede poner un título y
+destildar "Incluir en el PDF" para tenerlo guardado sin imprimirlo. Se pueden agregar y quitar
+también después de confirmar.
+
+> **Los adjuntos se guardan en `server/data/cotizaciones-adjuntos/` (se puede mover con la
+> variable `COTIZACIONES_ADJ_DIR` en `server/.env`) y NO entran en el backup automático.**
+> Conviene respaldar esa carpeta aparte, igual que la de las fotos del catálogo.
+
+### 9.5) Al actualizar la aplicación
+
+Este módulo agrega la librería `pdf-lib` (JavaScript puro) para unir los PDF. En la PC servidor
+hay que correr `npm install` y `npm run build`, y reiniciar el servidor. Las tablas nuevas
+(migraciones `0009_cotizaciones.sql` y `0010_clientes.sql`) se crean solas al arrancar y **no
+modifican ninguna tabla existente** (solo agregan una columna a la tabla de presupuestos de la
+app).
+
+### 9.6) Clientes guardados, por CUIT
+
+Los clientes se guardan solos, con el **CUIT como clave**, cada vez que se guardan los datos de
+un presupuesto. Se ven y se corrigen en el menú **Clientes**.
+
+- **Se guarda** razón social, dirección, contacto, mail y teléfono. Si el CUIT ya existe, no se
+  duplica: se actualiza lo que el presupuesto trae con contenido (lo más reciente gana) y un dato
+  vacío **no borra** el que ya estaba.
+- **Autocompletado en el presupuesto**: al escribir un CUIT y salir del campo se completa la
+  ficha del cliente (solo lo que esté vacío, no pisa lo que ya escribiste). También se puede
+  escribir parte de la razón social y elegir el cliente de la lista, que completa todos sus datos.
+- **CUIT**: se acepta escrito de cualquier forma (`30528303540`, `30-52830354-0`,
+  `30 52830354 0`) y se guarda con guiones. Se valida el dígito verificador. Un CUIT dudoso **no
+  bloquea** el presupuesto (todos los datos son opcionales): se guarda tal cual y la pantalla
+  avisa, pero no se crea cliente.
+- **Menú Clientes**: buscar por razón social, contacto o CUIT, ver cuántos presupuestos tiene cada
+  uno, editar sus datos (el CUIT no puede repetirse) y borrarlo. Borrar un cliente no toca sus
+  presupuestos: conservan sus datos, y si se guarda otro con ese CUIT el cliente se vuelve a crear.
+- Al arrancar el servidor, los presupuestos que ya estaban cargados con un CUIT válido se guardan
+  como clientes (una sola vez; no hace nada si no hay nada para completar).
+
+Los presupuestos que vienen del Excel no cargan clientes por ahora: el import automático no lee el
+CUIT.
+
+---
+
+## 10) Resumen operativo del día a día
 
 - La PC servidor tiene que quedar prendida (o al menos no en suspensión) para que el resto
   pueda usar la app.

@@ -323,6 +323,7 @@ function PendientePosibleReemplazo({ pendiente, onResuelto }) {
         <strong>Evento:</strong> {nuevo?.evento_nombre} — <strong>Lote:</strong> {nuevo?.lote_codigo}
         {nuevo?.lote_expositor ? ` (${nuevo.lote_expositor})` : ''}
       </p>
+      <div className="tabla-scroll">
       <table>
         <thead>
           <tr>
@@ -354,6 +355,7 @@ function PendientePosibleReemplazo({ pendiente, onResuelto }) {
           </tr>
         </tbody>
       </table>
+      </div>
       <div className="toolbar" style={{ marginTop: 8, marginBottom: 0 }}>
         <button className="primario" onClick={() => resolver('reemplazo')} disabled={enviando}>
           Es un reemplazo (borrar el viejo)

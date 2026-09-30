@@ -322,6 +322,7 @@ test('versiones: cambiar el porcentaje recalcula, duplicar copia la foto tal cua
   const copia = (await api('oper1', 'POST', `/versiones/${feria.id}/duplicar`, { nombre: 'Feria copia' })).cuerpo;
   assert.equal(copia.porcentaje_global, 0.6);
   assert.equal(copia.pie_legal, 'Vale hasta el {fecha_vigencia}');
+  assert.equal(copia.es_historial, 0, 'duplicar una versión de evento da otra versión de evento, no un historial');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM catalogo_version_precios WHERE version_id = ?').get(copia.id).n, db.prepare('SELECT COUNT(*) AS n FROM catalogo_items').get().n);
   assert.match((await api('oper1', 'POST', `/versiones/${feria.id}/duplicar`, { nombre: 'FERIA COPIA' })).cuerpo.error, /Ya existe una versión llamada/);
   assert.equal((await api('oper1', 'POST', `/versiones/${feria.id}/duplicar`)).cuerpo.nombre, 'Feria 60 (copia)');
@@ -330,6 +331,57 @@ test('versiones: cambiar el porcentaje recalcula, duplicar copia la foto tal cua
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM catalogo_version_precios WHERE version_id = ?').get(copia.id).n, 0, 'borrar la versión borra su foto');
   assert.equal((await api('oper1', 'GET', `/versiones/${copia.id}`)).status, 404);
   assert.equal((await api('oper1', 'DELETE', '/versiones/999999')).status, 404);
+});
+
+test('historial de la General: duplicarla guarda una foto fija, con nombre, que no se puede editar ni recalcular pero sí renombrar y borrar', async () => {
+  const general = (await api('oper1', 'GET', '/versiones')).cuerpo.find((v) => v.es_general === 1);
+  assert.equal(general.es_historial, 0);
+
+  const guardada = (await api('oper1', 'POST', `/versiones/${general.id}/duplicar`, { nombre: 'General antes de septiembre' })).cuerpo;
+  assert.equal(guardada.es_historial, 1);
+  assert.equal(guardada.es_general, 0);
+  assert.equal(guardada.porcentaje_global, general.porcentaje_global);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM catalogo_version_precios WHERE version_id = ?').get(guardada.id).n, db.prepare('SELECT COUNT(*) AS n FROM catalogo_items').get().n, 'misma foto de precios que la General en ese momento');
+
+  // Es de sólo lectura para el precio: ni el porcentaje ni "aplicar a todos" se pueden tocar, ni se recalcula
+  for (const cuerpo of [{ porcentaje_global: 0.6 }, { aplicar_a_todos: true }]) {
+    const r = await api('oper1', 'PUT', `/versiones/${guardada.id}`, cuerpo);
+    assert.equal(r.status, 400);
+    assert.match(r.cuerpo.error, /versión guardada del historial.*foto fija/);
+  }
+  const recalc = await api('oper1', 'POST', `/versiones/${guardada.id}/recalcular`);
+  assert.equal(recalc.status, 400);
+  assert.match(recalc.cuerpo.error, /foto fija/);
+
+  // La vigencia y el pie legal sí se pueden corregir: son sólo texto del PDF, no cambian ningún precio
+  const conVigencia = await api('oper1', 'PUT', `/versiones/${guardada.id}`, { fecha_vigencia: '2027-01-01', pie_legal: 'Vale para este evento.' });
+  assert.equal(conVigencia.status, 200);
+  assert.equal(conVigencia.cuerpo.fecha_vigencia, '2027-01-01');
+  assert.equal(conVigencia.cuerpo.pie_legal, 'Vale para este evento.');
+  assert.equal(conVigencia.cuerpo.es_historial, 1, 'sigue siendo del historial');
+
+  // Pero sí se puede renombrar (eso es "ponerle un nombre") y cambiarle el pie legal
+  const renombrada = await api('oper1', 'PUT', `/versiones/${guardada.id}`, { nombre: 'Lista de agosto 2026' });
+  assert.equal(renombrada.status, 200);
+  assert.equal(renombrada.cuerpo.nombre, 'Lista de agosto 2026');
+  assert.equal(renombrada.cuerpo.es_historial, 1, 'sigue siendo del historial');
+
+  // Se ve en el listado general de versiones (es una fila más de la misma tabla) y se puede exportar a PDF
+  assert.ok((await api('oper1', 'GET', '/versiones')).cuerpo.some((v) => v.id === guardada.id && v.es_historial === 1));
+  const pdf = await fetch(`${base}/api/catalogo/versiones/${guardada.id}/pdf`, { headers: { cookie: cookies.oper1 } });
+  assert.equal(pdf.status, 200);
+
+  // Se puede borrar como cualquier versión de evento
+  assert.equal((await api('oper1', 'DELETE', `/versiones/${guardada.id}`)).status, 200);
+  assert.equal((await api('oper1', 'GET', `/versiones/${guardada.id}`)).status, 404);
+});
+
+test('historial de la General: duplicar un historial da otro historial, y duplicar sin nombre respeta el patrón "(copia)"', async () => {
+  const general = (await api('oper1', 'GET', '/versiones')).cuerpo.find((v) => v.es_general === 1);
+  const original = (await api('oper1', 'POST', `/versiones/${general.id}/duplicar`, { nombre: 'Foto base' })).cuerpo;
+  const copiaDeCopia = (await api('oper1', 'POST', `/versiones/${original.id}/duplicar`)).cuerpo;
+  assert.equal(copiaDeCopia.nombre, 'Foto base (copia)');
+  assert.equal(copiaDeCopia.es_historial, 1, 'duplicar un historial da otro historial');
 });
 
 test('el PDF de una versión de evento sale con sus precios', async () => {

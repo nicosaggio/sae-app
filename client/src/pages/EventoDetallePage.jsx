@@ -90,7 +90,7 @@ export function EventoDetallePage() {
       <button onClick={() => navigate('/calendario')} style={{ marginBottom: 12 }}>
         ← Volver al calendario
       </button>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h2>{evento.nombre}</h2>
         {puedeEscribir && (
           <button onClick={() => setFusionAbierta(true)}>Unificar con otro evento…</button>

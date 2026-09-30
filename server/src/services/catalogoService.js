@@ -555,8 +555,12 @@ function actualizarTelevisores({ adicional_pie: adicional, precios } = {}) {
 function listarImportaciones() {
   return db
     .prepare(
-      `SELECT c.id, c.archivo, c.fecha, c.items_afectados, c.usuario_id, u.nombre_usuario AS usuario
-         FROM catalogo_importaciones c LEFT JOIN usuarios u ON u.id = c.usuario_id ORDER BY c.id DESC`
+      `SELECT c.id, c.archivo, c.fecha, c.items_afectados, c.usuario_id, u.nombre_usuario AS usuario,
+              c.historial_version_id, hv.nombre AS historial_version_nombre
+         FROM catalogo_importaciones c
+         LEFT JOIN usuarios u ON u.id = c.usuario_id
+         LEFT JOIN catalogo_versiones hv ON hv.id = c.historial_version_id
+        ORDER BY c.id DESC`
     )
     .all();
 }

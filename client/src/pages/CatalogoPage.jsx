@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { catalogoApi as api } from '../api/catalogoApi';
 import { useAuth } from '../context/AuthContext';
 import { FichaCatalogo } from '../components/FichaCatalogo';
-import { fechaLarga, formatearImporte, urlImagen } from '../catalogoFormat';
+import { ItemCatalogoModal } from '../components/ItemCatalogoModal';
+import { fechaCorta, fechaLarga, formatearImporte, urlImagen } from '../catalogoFormat';
 
 function CeldaDeItem({ item, conDecimales, onClick }) {
   const foto = urlImagen(item.imagen);
@@ -96,13 +96,13 @@ function Hoja({ pagina, logo, pie, conDecimales, organizando, items, onCelda, on
 
 export function CatalogoPage() {
   const { puedeEscribir } = useAuth();
-  const navigate = useNavigate();
   const [versiones, setVersiones] = useState([]);
   const [versionId, setVersionId] = useState(null);
   const [ajustes, setAjustes] = useState(null);
   const [paginas, setPaginas] = useState([]);
   const [indice, setIndice] = useState(0);
   const [items, setItems] = useState([]);
+  const [abrirItemId, setAbrirItemId] = useState(null);
   const [borrador, setBorrador] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -117,8 +117,11 @@ export function CatalogoPage() {
   }
 
   useEffect(() => {
-    Promise.all([cargarVersiones(false), api.get('/ajustes')])
-      .then(([, a]) => setAjustes(a))
+    Promise.all([cargarVersiones(false), api.get('/ajustes'), api.get('/items')])
+      .then(([, a, its]) => {
+        setAjustes(a);
+        setItems(its);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setCargando(false));
   }, []);
@@ -254,14 +257,30 @@ export function CatalogoPage() {
                   setAviso('');
                   setVersionId(Number(e.target.value));
                 }}>
-                {versiones.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nombre} ({Math.round(v.porcentaje_global * 10000) / 100} %)
-                  </option>
-                ))}
+                <optgroup label="Vigentes">
+                  {versiones.filter((v) => !v.es_historial).map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nombre} ({Math.round(v.porcentaje_global * 10000) / 100} %)
+                    </option>
+                  ))}
+                </optgroup>
+                {versiones.some((v) => v.es_historial) && (
+                  <optgroup label="Historial de la General">
+                    {versiones.filter((v) => v.es_historial).map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
-            {version && !version.es_general && version.items_desactualizados > 0 && !organizando && (
+            {version?.es_historial === 1 && (
+              <span className="texto-suave" style={{ margin: 0 }}>
+                Versión guardada del historial ({fechaCorta(version.creado_en)}): precios fijos de ese momento.
+              </span>
+            )}
+            {version && !version.es_general && !version.es_historial && version.items_desactualizados > 0 && !organizando && (
               <span className="aviso advertencia" style={{ margin: 0 }}>
                 {version.items_desactualizados} precios desactualizados respecto de las reglas de hoy{' '}
                 {puedeEscribir && <button onClick={recalcular}>Recalcular</button>}
@@ -356,7 +375,7 @@ export function CatalogoPage() {
                 organizando={organizando}
                 items={items}
                 onCelda={ponerEnCelda}
-                onAbrirItem={(id) => navigate(`/catalogo/items?abrir=${id}`)}
+                onAbrirItem={setAbrirItemId}
               />
             )
           )}
@@ -368,6 +387,20 @@ export function CatalogoPage() {
             ))}
           </datalist>
         </>
+      )}
+
+      {abrirItemId && (
+        <ItemCatalogoModal
+          itemId={abrirItemId}
+          codigos={items.map((i) => i.codigo)}
+          puedeEscribir={puedeEscribir}
+          onClose={() => setAbrirItemId(null)}
+          onCambio={async () => {
+            await cargarPaginas();
+            setItems(await api.get('/items'));
+          }}
+          onAbrirOtro={setAbrirItemId}
+        />
       )}
     </div>
   );

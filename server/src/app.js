@@ -11,6 +11,8 @@ const exportRoutes = require('./routes/export');
 const importacionesRoutes = require('./routes/importaciones');
 const usuariosRoutes = require('./routes/usuarios');
 const catalogoRoutes = require('./routes/catalogo');
+const cotizacionesRoutes = require('./routes/cotizaciones');
+const clientesRoutes = require('./routes/clientes');
 
 const CLIENT_DIST = path.join(__dirname, '..', '..', 'client', 'dist');
 
@@ -46,6 +48,8 @@ function createApp() {
   app.use('/api/importaciones', importacionesRoutes);
   app.use('/api/usuarios', usuariosRoutes);
   app.use('/api/catalogo', catalogoRoutes);
+  app.use('/api/cotizaciones', cotizacionesRoutes);
+  app.use('/api/clientes', clientesRoutes);
 
   app.use('/api', (req, res) => {
     res.status(404).json({ error: 'No encontrado' });

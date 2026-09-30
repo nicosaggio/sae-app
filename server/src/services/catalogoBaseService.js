@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { db, transaction } = require('../db/connection');
 const { normalizarCodigo, describirMotivo } = require('./catalogoPreciosService');
 const calculo = require('./catalogoCalculoService');
+const versionesService = require('./catalogoVersionesService');
 
 const { errorHttp } = calculo;
 
@@ -31,7 +32,9 @@ function variacionPct(antes, despues) {
 function armarReporte(baseParche, archivo) {
   const items = calculo.leerItems();
   const ajustes = calculo.leerAjustes();
-  const versiones = db.prepare('SELECT * FROM catalogo_versiones ORDER BY es_general DESC, id').all();
+  // Las versiones del historial de la General son una foto fija: no se recalculan con una base nueva,
+  // así que no cuentan acá (ver confirmar()).
+  const versiones = db.prepare('SELECT * FROM catalogo_versiones WHERE es_historial = 0 ORDER BY es_general DESC, id').all();
   const general = versiones.find((v) => v.es_general);
   const nuevos = calculo.calcularParaVersion(general, { items, base: baseParche.precios, ajustes });
 
@@ -153,16 +156,21 @@ async function confirmar(token, { usuarioId, hacerBackup = null }) {
 
   const reporte = transaction(() => {
     const armado = armarReporte(pendiente.baseParche, pendiente.archivo);
+    // Antes de pisar la General con los precios nuevos, se guarda sola una foto con nombre de cómo
+    // estaba (con esto no hace falta acordarse de guardarla a mano antes de actualizar la base). Si
+    // esta base no cambia nada, no tiene sentido guardar una foto igual a la que ya había.
+    const historial = armado.resumen.itemsConCambios > 0 ? versionesService.guardarHistorialGeneral() : null;
     calculo.guardarBasePrecios(pendiente.baseParche);
     const contexto = { items: calculo.leerItems(), base: calculo.leerBasePrecios(), ajustes: calculo.leerAjustes() };
-    for (const v of db.prepare('SELECT id FROM catalogo_versiones').all()) calculo.recalcularVersion(v.id, contexto);
-    db.prepare('INSERT INTO catalogo_importaciones (archivo, usuario_id, items_afectados, resumen_json) VALUES (?, ?, ?, ?)').run(
+    for (const v of db.prepare('SELECT id FROM catalogo_versiones WHERE es_historial = 0').all()) calculo.recalcularVersion(v.id, contexto);
+    db.prepare('INSERT INTO catalogo_importaciones (archivo, usuario_id, items_afectados, resumen_json, historial_version_id) VALUES (?, ?, ?, ?, ?)').run(
       pendiente.archivo,
       usuarioId,
       armado.resumen.itemsConCambios,
-      JSON.stringify(armado)
+      JSON.stringify(armado),
+      historial ? historial.id : null
     );
-    return armado;
+    return { ...armado, historial_version: historial ? { id: historial.id, nombre: historial.nombre } : null };
   });
   pendientes.delete(token);
   return reporte;

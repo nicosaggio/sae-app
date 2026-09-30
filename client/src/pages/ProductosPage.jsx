@@ -112,6 +112,7 @@ export function ProductosPage() {
         {cargando ? (
           <p className="texto-suave">Cargando…</p>
         ) : (
+          <div className="tabla-scroll">
           <table>
             <thead>
               <tr>
@@ -167,6 +168,7 @@ export function ProductosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

@@ -6,6 +6,8 @@ import { HomePage } from './pages/HomePage';
 import { CalendarioPage } from './pages/CalendarioPage';
 import { EventoDetallePage } from './pages/EventoDetallePage';
 import { PresupuestosPage } from './pages/PresupuestosPage';
+import { CotizacionEditorPage } from './pages/CotizacionEditorPage';
+import { ClientesPage } from './pages/ClientesPage';
 import { TotalesPage } from './pages/TotalesPage';
 import { AlertasPage } from './pages/AlertasPage';
 import { ProductosPage } from './pages/ProductosPage';
@@ -36,6 +38,9 @@ function App() {
         <Route path="calendario" element={<CalendarioPage />} />
         <Route path="eventos/:id" element={<EventoDetallePage />} />
         <Route path="presupuestos" element={<PresupuestosPage />} />
+        <Route path="presupuestos/nuevo" element={<CotizacionEditorPage />} />
+        <Route path="presupuestos/carga/:id" element={<CotizacionEditorPage />} />
+        <Route path="clientes" element={<ClientesPage />} />
         <Route path="totales" element={<TotalesPage />} />
         <Route path="alertas" element={<AlertasPage />} />
         <Route path="productos" element={<ProductosPage />} />

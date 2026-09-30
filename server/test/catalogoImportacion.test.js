@@ -250,3 +250,80 @@ test('los ítems recalculan con la base guardada: un ítem nuevo con regla base 
   assert.equal(conTexto.cuerpo.estado_precio, 'sin_precio');
   assert.equal(conTexto.cuerpo.motivo_precio, 'precio_texto', '"S / P" no se convierte en $ 0');
 });
+
+// De acá en adelante, para no perder ítems del catálogo que ya dependen de "base" (NUEVO-1, NUEVO-2), las
+// bases de prueba siempre incluyen esos códigos además de CE-100 con un valor nuevo.
+const baseConCE100 = (valorCE100) => excelDeBase([fila('CE-100', valorCE100), fila('NUEVO-1', 5000, 'Un código nuevo'), fila('NUEVO-2', 'S / P')]);
+
+// "DD/MM/AAAA" de hoy, calculado acá independiente del código real, sólo para armar el nombre esperado en los tests.
+function hoyCortoDeTest() {
+  const hoy = new Date();
+  const dos = (n) => String(n).padStart(2, '0');
+  return `${dos(hoy.getDate())}/${dos(hoy.getMonth() + 1)}/${hoy.getFullYear()}`;
+}
+
+test('confirmar con cambios reales guarda sola una versión del historial con los precios de ANTES, y no la toca al recalcular', async () => {
+  // Una versión del historial guardada a mano, para comprobar que confirmar una base nueva tampoco la toca a ella.
+  const general = (await api('admin1', 'GET', '/versiones')).cuerpo.find((v) => v.es_general === 1);
+  const idCE100 = db.prepare("SELECT id FROM catalogo_items WHERE codigo = 'CE-100'").get().id;
+  const manual = (await api('admin1', 'POST', `/versiones/${general.id}/duplicar`, { nombre: 'Guardada a mano antes del test' })).cuerpo;
+  const precioManualAntes = db.prepare('SELECT sae FROM catalogo_version_precios WHERE version_id = ? AND item_id = ?').get(manual.id, idCE100).sae;
+
+  const antes = { sae: sae('CE-100').sae, versiones: contar('catalogo_versiones') };
+  const previa = (await subir('admin1', baseConCE100(3000), 'BASE con más cambios.xlsx')).cuerpo;
+  assert.ok(previa.resumen.itemsConCambios > 0);
+  // La versión guardada a mano no cuenta como afectada: es una foto fija, no se va a recalcular.
+  assert.equal(previa.versiones_afectadas.some((v) => v.id === manual.id), false);
+
+  const r = await api('admin1', 'POST', '/importar/confirmar', { token: previa.token });
+  assert.equal(r.status, 200);
+
+  // Se guardó sola una foto de cómo estaba la General ANTES de este cambio
+  assert.ok(r.cuerpo.historial_version, 'la respuesta de confirmar dice qué versión se guardó');
+  assert.match(r.cuerpo.historial_version.nombre, new RegExp(`^General ${hoyCortoDeTest().replace(/\//g, '\\/')}`));
+  assert.equal(contar('catalogo_versiones'), antes.versiones + 1, 'una versión nueva: el historial automático (la guardada a mano ya estaba contada)');
+
+  const autoGuardada = db.prepare('SELECT * FROM catalogo_versiones WHERE id = ?').get(r.cuerpo.historial_version.id);
+  assert.equal(autoGuardada.es_historial, 1);
+  const precioAutoGuardado = db.prepare('SELECT sae FROM catalogo_version_precios WHERE version_id = ? AND item_id = ?').get(autoGuardada.id, idCE100).sae;
+  assert.equal(precioAutoGuardado, antes.sae, 'el historial quedó con el precio de ANTES de este cambio, no con el nuevo');
+  assert.notEqual(sae('CE-100').sae, antes.sae, 'mientras que la General sí cambió');
+
+  // La guardada a mano tampoco se tocó
+  assert.equal(db.prepare('SELECT sae FROM catalogo_version_precios WHERE version_id = ? AND item_id = ?').get(manual.id, idCE100).sae, precioManualAntes);
+
+  // El historial de importaciones enlaza a la versión que se guardó
+  const historialImportaciones = (await api('admin1', 'GET', '/importaciones')).cuerpo;
+  assert.equal(historialImportaciones[0].historial_version_id, autoGuardada.id);
+  assert.equal(historialImportaciones[0].historial_version_nombre, autoGuardada.nombre);
+
+  // Y se puede exportar / renombrar / usar como cualquier otra versión
+  assert.equal((await api('admin1', 'PUT', `/versiones/${autoGuardada.id}`, { nombre: 'Lista antes del cambio grande' })).status, 200);
+});
+
+test('confirmar sin cambios reales no guarda un historial nuevo (no tiene sentido una foto igual a la que ya había)', async () => {
+  const antes = contar('catalogo_versiones');
+  const valorActual = db.prepare("SELECT cliente_numero FROM catalogo_base_precios WHERE codigo = 'CE-100'").get().cliente_numero;
+  const previa = (await subir('admin1', baseConCE100(valorActual))).cuerpo;
+  assert.equal(previa.resumen.itemsConCambios, 0, 'es la misma base que ya está guardada');
+
+  const r = await api('admin1', 'POST', '/importar/confirmar', { token: previa.token });
+  assert.equal(r.status, 200);
+  assert.equal(r.cuerpo.historial_version, null);
+  assert.equal(contar('catalogo_versiones'), antes);
+  assert.equal((await api('admin1', 'GET', '/importaciones')).cuerpo[0].historial_version_id, null);
+});
+
+test('si ya existe una versión con el nombre automático de hoy, el historial se guarda con "(2)" y no pisa a la que ya había', async () => {
+  const nombreDeHoy = `General ${hoyCortoDeTest()}`;
+  const general = (await api('admin1', 'GET', '/versiones')).cuerpo.find((v) => v.es_general === 1);
+  // Si ya existe (por el test anterior, con otro nombre) esto la crea igual, con otro nombre exacto.
+  await api('admin1', 'POST', `/versiones/${general.id}/duplicar`, { nombre: nombreDeHoy });
+
+  const previa = (await subir('admin1', baseConCE100(3500))).cuerpo;
+  assert.ok(previa.resumen.itemsConCambios > 0);
+  const r = await api('admin1', 'POST', '/importar/confirmar', { token: previa.token });
+
+  assert.notEqual(r.cuerpo.historial_version.nombre, nombreDeHoy, 'no puede repetir el nombre que ya existía');
+  assert.match(r.cuerpo.historial_version.nombre, /\(2\)$/);
+});

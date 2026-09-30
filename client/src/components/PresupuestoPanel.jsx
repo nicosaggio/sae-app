@@ -239,6 +239,7 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado }) {
         </form>
       )}
 
+      <div className="tabla-scroll">
       <table style={{ marginTop: 8 }}>
         <thead>
           <tr>
@@ -323,6 +324,7 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

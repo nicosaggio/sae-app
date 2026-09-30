@@ -115,8 +115,18 @@ h1, h2, h3 {
   width: 100%;
 }
 
+.topbar-mobile {
+  display: none;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
 .main {
   flex: 1;
+  min-width: 0; /* si no, un hijo ancho (tabla, grilla) empuja el ancho del flex item y desborda la página */
+  overflow-x: hidden; /* red de seguridad: ningún hijo (ancho o sin wrap) puede forzar scroll horizontal de toda la página */
   padding: 28px 32px;
   max-width: 1400px;
   text-align: left;
@@ -691,6 +701,7 @@ button.chip {
   gap: 10px;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   margin-bottom: 14px;
 }
 
@@ -868,7 +879,342 @@ button.chip {
   margin: 0 0 10px;
 }
 
-/* El contenido del catálogo (tablas anchas) tiene que poder achicarse dentro de .main y scrollear por su cuenta. */
-.main:has(.catalogo-raiz) {
+/* --- Presupuestos cargados desde la app --- */
+.cot-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cot-cabecera > button.primario:last-child {
+  margin-left: auto;
+}
+
+.badge.pendiente_confirmacion {
+  background: var(--color-advertencia-fondo);
+  color: var(--color-advertencia);
+}
+
+.badge.confirmada {
+  background: var(--color-exito-fondo);
+  color: var(--color-exito);
+}
+
+.badge.rechazada {
+  background: var(--color-peligro-fondo);
+  color: var(--color-peligro);
+}
+
+.cot-opcion {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cot-precio {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cot-sin-precio {
+  color: var(--color-advertencia);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cot-lineas td {
+  vertical-align: top;
+}
+
+.cot-numero {
+  width: 130px;
+  text-align: right;
+}
+
+.cot-lineas input.cot-cantidad {
+  width: 80px;
+}
+
+.cot-precio-input.sin-precio {
+  border-color: var(--color-advertencia);
+  background: var(--color-advertencia-fondo);
+}
+
+.cot-comentario {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.cot-totales {
+  margin: 16px 0 0 auto;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cot-totales > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cot-totales .cot-total {
+  border-top: 1px solid var(--color-borde);
+  padding-top: 8px;
+  font-size: 18px;
+}
+
+ul.lista-simple {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+ul.lista-simple li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+/* Adjuntos (croquis y planos) */
+ul.adjuntos {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+ul.adjuntos li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.adjunto-mini {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: #fff;
+}
+
+.adjunto-pdf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radio);
+  background: var(--color-peligro-fondo);
+  color: var(--color-peligro);
+  font-weight: 700;
+}
+
+.adjunto-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.adjunto-incluir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Dentro de un formulario el buscador ocupa su columna (el ancho mínimo de 260px es para las barras de filtros) */
+.form-grid .campo {
   min-width: 0;
+}
+
+.form-grid .buscador-producto {
+  min-width: 0;
+}
+
+/* ============================================================================================
+   Mobile (celular / tablet chica): el menú lateral pasa a ser un panel que se desliza desde la
+   izquierda, con una barra superior y botón de hamburguesa para abrirlo/cerrarlo.
+   ============================================================================================ */
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .topbar-mobile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--color-oscuro);
+    padding: 8px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+  }
+
+  .topbar-mobile .menu-toggle {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 22px;
+    line-height: 1;
+    padding: 8px 12px;
+  }
+
+  .topbar-mobile .menu-toggle:hover {
+    background: var(--color-oscuro-suave);
+  }
+
+  .topbar-logo {
+    height: 28px;
+    border-radius: 4px;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 260px;
+    max-width: 82vw;
+    height: 100vh;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 110;
+  }
+
+  .sidebar.abierto {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(33, 31, 30, 0.5);
+    z-index: 100;
+  }
+
+  .main {
+    padding: 16px;
+  }
+
+  .modal-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal-contenido {
+    max-width: none;
+    border-radius: 0;
+    min-height: 100vh;
+    padding: 20px 16px;
+  }
+
+  /* La hoja del catálogo (3 columnas, pensada como una página A4) se apila en una columna. */
+  .hoja-banda {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .hoja-catalogo {
+    padding: 14px 16px 12px;
+  }
+
+  /* El calendario mantiene sus 7 columnas (no tiene sentido apilar los días) pero scrollea
+     horizontal dentro de la tarjeta en vez de achicarse hasta ser ilegible. */
+  .card:has(.calendario-grid) {
+    overflow-x: auto;
+  }
+
+  .calendario-grid {
+    min-width: 700px;
+  }
+
+  .calendario-celda {
+    min-height: 86px;
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .calendario-dia-header {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .evento-chip {
+    padding: 6px 8px;
+    font-size: 12.5px;
+  }
+
+  .toolbar {
+    gap: 10px;
+  }
+
+  /* Campos y botones más grandes para tocar con el dedo. El tamaño de letra de 16px en los
+     campos evita que iOS haga zoom automático al enfocarlos (lo dispara un campo con letra
+     más chica que eso). */
+  input, select, textarea {
+    font-size: 16px;
+    padding: 11px 12px;
+  }
+
+  button, a.boton {
+    padding: 11px 16px;
+    font-size: 15px;
+  }
+
+  button.chip {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  .acciones-fila {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .sidebar nav a, .sidebar nav .nav-link {
+    padding: 14px;
+    font-size: 16px;
+  }
+
+  .subnav a {
+    padding: 11px 14px;
+    font-size: 14px;
+  }
+
+  .buscador-opcion {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .lista-resumen li {
+    padding: 12px 10px;
+  }
+
+  th, td {
+    padding: 12px 14px;
+  }
+
+  .modal-cerrar {
+    padding: 10px 14px;
+    font-size: 20px;
+  }
 }

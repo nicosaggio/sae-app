@@ -22,35 +22,37 @@ export function AlertasPage() {
         ) : !alertas || alertas.length === 0 ? (
           <p className="texto-suave">Sin alertas por ahora.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Evento</th>
-                <th>Fecha de inicio</th>
-                <th>Lote</th>
-                <th>Cliente</th>
-                <th>Monto</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {alertas.map((a) => (
-                <tr key={a.id} className={a.fecha_inicio < hoy ? 'fila-alerta' : ''}>
-                  <td>{a.evento_nombre}</td>
-                  <td>
-                    {a.fecha_inicio}
-                    {a.fecha_inicio < hoy && <span className="texto-suave"> (vencido)</span>}
-                  </td>
-                  <td>{a.lote_codigo}{a.lote_expositor ? ` — ${a.lote_expositor}` : ''}</td>
-                  <td>{a.cliente_nombre || '—'}</td>
-                  <td>{formatearMonto(a.monto_total)}</td>
-                  <td>
-                    <button onClick={() => navigate(`/eventos/${a.evento_id}`)}>Ver evento</button>
-                  </td>
+          <div className="tabla-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Evento</th>
+                  <th>Fecha de inicio</th>
+                  <th>Lote</th>
+                  <th>Cliente</th>
+                  <th>Monto</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {alertas.map((a) => (
+                  <tr key={a.id} className={a.fecha_inicio < hoy ? 'fila-alerta' : ''}>
+                    <td>{a.evento_nombre}</td>
+                    <td>
+                      {a.fecha_inicio}
+                      {a.fecha_inicio < hoy && <span className="texto-suave"> (vencido)</span>}
+                    </td>
+                    <td>{a.lote_codigo}{a.lote_expositor ? ` — ${a.lote_expositor}` : ''}</td>
+                    <td>{a.cliente_nombre || '—'}</td>
+                    <td>{formatearMonto(a.monto_total)}</td>
+                    <td>
+                      <button onClick={() => navigate(`/eventos/${a.evento_id}`)}>Ver evento</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

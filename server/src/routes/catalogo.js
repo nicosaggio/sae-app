@@ -6,6 +6,7 @@ const { bloquearSiSoloEstado } = require('../middleware/restringirEscritura');
 const catalogoService = require('../services/catalogoService');
 const versionesService = require('../services/catalogoVersionesService');
 const baseService = require('../services/catalogoBaseService');
+const versionImportService = require('../services/catalogoVersionImportService');
 const catalogoPdfService = require('../services/catalogoPdfService');
 const { leerBaseParche } = require('../services/catalogoImportService');
 const { ejecutarBackup } = require('../services/backupService');
@@ -107,6 +108,40 @@ router.delete('/versiones/:id', bloquearSiSoloEstado, (req, res) => {
   res.json({ ok: true });
 });
 router.get('/versiones/:id/pdf', (req, res) => catalogoPdfService.streamPdf(res, id(req)));
+
+// Crear una versión con los precios finales de un archivo (planilla de presupuesto de un evento
+// puntual): previsualizar y después confirmar, igual que la actualización de la base parche.
+router.post('/versiones/importar', requireAdmin, bloquearSiSoloEstado, (req, res, next) => {
+  subida.single('archivo')(req, res, (errorDeSubida) => {
+    if (errorDeSubida) return next(traducirErrorDeSubida(errorDeSubida));
+    if (!req.file) return next(Object.assign(new Error('Falta el archivo (campo "archivo")'), { status: 400 }));
+    try {
+      const cuerpo = req.body || {};
+      const reporte = versionImportService.previsualizar(req.file.buffer, {
+        archivo: req.file.originalname,
+        usuarioId: req.usuario.id,
+        nombre: cuerpo.nombre,
+        aplicarATodos: cuerpo.aplicar_a_todos === 'true' || cuerpo.aplicar_a_todos === true,
+        fechaVigencia: cuerpo.fecha_vigencia || undefined,
+        pieLegal: cuerpo.pie_legal,
+        porcentajeReferencia: cuerpo.porcentaje_referencia === undefined || cuerpo.porcentaje_referencia === '' ? undefined : Number(cuerpo.porcentaje_referencia),
+      });
+      return res.json(reporte);
+    } catch (err) {
+      return next(err);
+    }
+  });
+});
+
+router.post('/versiones/importar/confirmar', requireAdmin, bloquearSiSoloEstado, (req, res, next) => {
+  try {
+    const token = req.body && req.body.token;
+    if (!token) return res.status(400).json({ error: 'Falta el token de la previsualización' });
+    res.status(201).json(versionImportService.confirmar(token, { usuarioId: req.usuario.id }));
+  } catch (err) {
+    next(err);
+  }
+});
 
 // --- Ajustes y televisores
 router.get('/ajustes', (req, res) => res.json(catalogoService.obtenerAjustes()));
