@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useListaTeclado } from '../hooks/useListaTeclado';
 
 /** Input de texto con autocompletado para elegir un producto por nombre o código. */
 export function BuscadorProducto({ productos, value, onChange, placeholder = 'Buscar producto…' }) {
@@ -36,19 +37,28 @@ export function BuscadorProducto({ productos, value, onChange, placeholder = 'Bu
     setAbierto(false);
   }
 
+  const lista = useListaTeclado({
+    cantidad: coincidencias.length,
+    abierto,
+    setAbierto,
+    elegirEn: (i) => elegir(coincidencias[i]),
+    sugerirPrimera: query.trim() !== '',
+  });
+
   function onInputChange(e) {
     setQuery(e.target.value);
     setAbierto(true);
+    lista.reiniciar();
     if (value) onChange(null);
   }
 
   return (
     <div ref={contenedorRef} className="buscador-producto">
-      <input placeholder={placeholder} value={texto} onChange={onInputChange} onFocus={() => setAbierto(true)} />
+      <input placeholder={placeholder} value={texto} onChange={onInputChange} onFocus={() => setAbierto(true)} onKeyDown={lista.onKeyDown} />
       {abierto && coincidencias.length > 0 && (
-        <div className="buscador-dropdown">
-          {coincidencias.map((p) => (
-            <div key={p.id} className="buscador-opcion" onMouseDown={() => elegir(p)}>
+        <div className="buscador-dropdown" {...lista.propsLista}>
+          {coincidencias.map((p, i) => (
+            <div key={p.id} className="buscador-opcion" onMouseDown={() => elegir(p)} {...lista.propsOpcion(i)}>
               {p.nombre} <span className="texto-suave">({p.codigo}{p.rubro ? ` — ${p.rubro}` : ''})</span>
             </div>
           ))}

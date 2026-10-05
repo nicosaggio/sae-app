@@ -32,7 +32,7 @@ export function LoginPage() {
         </div>
         <h2>Iniciar sesión</h2>
         {error && <div className="aviso error">{error}</div>}
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} data-enter-envia>
           <div className="campo" style={{ marginBottom: 12 }}>
             <label>Usuario</label>
             <input

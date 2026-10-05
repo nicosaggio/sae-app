@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useListaTeclado } from '../hooks/useListaTeclado';
 
 /** Input de texto con autocompletado para elegir un evento por nombre. */
 export function BuscadorEvento({ eventos, value, onChange, placeholder = 'Buscar evento…' }) {
@@ -30,19 +31,28 @@ export function BuscadorEvento({ eventos, value, onChange, placeholder = 'Buscar
     setAbierto(false);
   }
 
+  const lista = useListaTeclado({
+    cantidad: coincidencias.length,
+    abierto,
+    setAbierto,
+    elegirEn: (i) => elegir(coincidencias[i]),
+    sugerirPrimera: query.trim() !== '',
+  });
+
   function onInputChange(e) {
     setQuery(e.target.value);
     setAbierto(true);
+    lista.reiniciar();
     if (value) onChange(null);
   }
 
   return (
     <div ref={contenedorRef} className="buscador-producto">
-      <input placeholder={placeholder} value={texto} onChange={onInputChange} onFocus={() => setAbierto(true)} />
+      <input placeholder={placeholder} value={texto} onChange={onInputChange} onFocus={() => setAbierto(true)} onKeyDown={lista.onKeyDown} />
       {abierto && coincidencias.length > 0 && (
-        <div className="buscador-dropdown">
-          {coincidencias.map((ev) => (
-            <div key={ev.id} className="buscador-opcion" onMouseDown={() => elegir(ev)}>
+        <div className="buscador-dropdown" {...lista.propsLista}>
+          {coincidencias.map((ev, i) => (
+            <div key={ev.id} className="buscador-opcion" onMouseDown={() => elegir(ev)} {...lista.propsOpcion(i)}>
               {ev.nombre} <span className="texto-suave">({ev.fecha_inicio || 'sin fecha'})</span>
             </div>
           ))}

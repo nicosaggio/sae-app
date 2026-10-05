@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BuscadorEvento } from '../components/BuscadorEvento';
 import { BuscadorCliente } from '../components/BuscadorCliente';
+import { useListaTeclado } from '../hooks/useListaTeclado';
 import { fechaCorta, fraccionATexto, pesos, textoAFraccion } from '../catalogoFormat';
 
 const CAMPOS_TEXTO = ['tipo', 'lote', 'nombre_stand', 'contacto', 'mail', 'telefono', 'razon_social', 'cuit', 'direccion', 'notas'];
@@ -33,6 +34,7 @@ const formDe = (c) => ({ evento_id: c ? c.evento_id : null, ...Object.fromEntrie
 function AgregarItem({ versionId, onAgregar }) {
   const [texto, setTexto] = useState('');
   const [resultados, setResultados] = useState([]);
+  const [resultadosDe, setResultadosDe] = useState(null); // el texto al que corresponden `resultados`
   const [abierto, setAbierto] = useState(false);
   const [elegido, setElegido] = useState(null);
   const [cantidad, setCantidad] = useState('1');
@@ -49,10 +51,14 @@ function AgregarItem({ versionId, onAgregar }) {
 
   useEffect(() => {
     if (!abierto) return undefined;
+    const consulta = texto;
     const espera = setTimeout(() => {
       api
-        .get(`/cotizaciones/catalogo/buscar?q=${encodeURIComponent(texto)}&version=${versionId || ''}`)
-        .then(setResultados)
+        .get(`/cotizaciones/catalogo/buscar?q=${encodeURIComponent(consulta)}&version=${versionId || ''}`)
+        .then((r) => {
+          setResultados(r);
+          setResultadosDe(consulta);
+        })
         .catch(() => setResultados([]));
     }, 200);
     return () => clearTimeout(espera);
@@ -64,6 +70,16 @@ function AgregarItem({ versionId, onAgregar }) {
     setAbierto(false);
     setAviso('');
   }
+
+  // Enter/Tab aceptan la opción marcada; mientras se escribe queda marcada la primera (autocompletado),
+  // pero sólo si la lista ya es la de lo escrito: con la búsqueda a medio responder sería una de antes.
+  const lista = useListaTeclado({
+    cantidad: resultados.length,
+    abierto,
+    setAbierto,
+    elegirEn: (i) => elegir(resultados[i]),
+    sugerirPrimera: texto.trim() !== '' && !elegido && resultadosDe === texto,
+  });
 
   async function agregar() {
     if (!elegido) return setAviso('Elegí un ítem de la lista');
@@ -90,13 +106,15 @@ function AgregarItem({ versionId, onAgregar }) {
                 setTexto(e.target.value);
                 setElegido(null);
                 setAbierto(true);
+                lista.reiniciar();
               }}
               onFocus={() => setAbierto(true)}
+              onKeyDown={lista.onKeyDown}
             />
             {abierto && resultados.length > 0 && (
-              <div className="buscador-dropdown">
-                {resultados.map((r) => (
-                  <div key={r.id} className="buscador-opcion cot-opcion" onMouseDown={() => elegir(r)}>
+              <div className="buscador-dropdown" {...lista.propsLista}>
+                {resultados.map((r, i) => (
+                  <div key={r.id} className="buscador-opcion cot-opcion" onMouseDown={() => elegir(r)} {...lista.propsOpcion(i)}>
                     <span>
                       <strong>{r.codigo}</strong> {r.descripcion} {r.rubro && <span className="texto-suave">({r.rubro})</span>}
                     </span>
@@ -109,7 +127,19 @@ function AgregarItem({ versionId, onAgregar }) {
         </div>
         <div className="campo" style={{ width: 90 }}>
           <label>Cantidad</label>
-          <input type="number" min="1" step="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && agregar()} />
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
+            onKeyDown={(e) => {
+              // Último campo de "Agregar ítem": Enter agrega la línea (no pasa al botón).
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              agregar();
+            }}
+          />
         </div>
         <button className="primario" onClick={agregar}>
           + Agregar

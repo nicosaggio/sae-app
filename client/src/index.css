@@ -415,6 +415,11 @@ tfoot td {
   background: var(--color-gris-fondo);
 }
 
+/* La opción marcada con el teclado (o la que se autocompleta con Enter) */
+.buscador-opcion[data-activa] {
+  background: var(--color-primario-claro);
+}
+
 .fila-alerta {
   background: var(--color-peligro-fondo) !important;
 }

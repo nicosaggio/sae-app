@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
+import { useListaTeclado } from '../hooks/useListaTeclado';
 
 /**
  * Campo de razón social con autocompletado: al escribir sugiere clientes ya guardados (por razón social,
@@ -31,6 +32,21 @@ export function BuscadorCliente({ value, onChange, onElegir, disabled = false })
 
   const sugerencias = abierto && value.trim().length >= 2 ? resultados : [];
 
+  function elegir(cliente) {
+    onElegir(cliente);
+    setAbierto(false);
+  }
+
+  // Texto libre: acá no se autocompleta sola la primera sugerencia (pisaría los datos de un cliente nuevo
+  // con los de otro parecido); sólo se acepta la que se marca con las flechas.
+  const lista = useListaTeclado({
+    cantidad: sugerencias.length,
+    abierto,
+    setAbierto,
+    elegirEn: (i) => elegir(sugerencias[i]),
+    sugerirPrimera: false,
+  });
+
   return (
     <div ref={contenedorRef} className="buscador-producto">
       <input
@@ -40,20 +56,15 @@ export function BuscadorCliente({ value, onChange, onElegir, disabled = false })
         onChange={(e) => {
           onChange(e.target.value);
           setAbierto(true);
+          lista.reiniciar();
         }}
         onFocus={() => setAbierto(true)}
+        onKeyDown={lista.onKeyDown}
       />
       {sugerencias.length > 0 && (
-        <div className="buscador-dropdown">
-          {sugerencias.map((c) => (
-            <div
-              key={c.id}
-              className="buscador-opcion"
-              onMouseDown={() => {
-                onElegir(c);
-                setAbierto(false);
-              }}
-            >
+        <div className="buscador-dropdown" {...lista.propsLista}>
+          {sugerencias.map((c, i) => (
+            <div key={c.id} className="buscador-opcion" onMouseDown={() => elegir(c)} {...lista.propsOpcion(i)}>
               <strong>{c.razon_social || 'Sin razón social'}</strong> <span className="texto-suave">({c.cuit})</span>
               {c.contacto && <div className="texto-suave">{c.contacto}</div>}
             </div>
