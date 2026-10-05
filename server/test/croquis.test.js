@@ -207,6 +207,28 @@ test('todos los paneles y las columnas se dibujan del mismo color; los demás bl
   assert.ok(coloresDe('IS-03').size === 1);
 });
 
+test('los paneles se dibujan todos igual: cuerpo translúcido y columnas huecas, sin trazados repetidos', () => {
+  const simbolos = require('../src/data/croquisSimbolos.json');
+  const esPanelOColumna = (codigo) => /^(PB|PC|PN|PV|PA)-/.test(codigo) || codigo === 'COLUMNA';
+  for (const [codigo, simbolo] of Object.entries(simbolos)) {
+    if (!esPanelOColumna(codigo)) continue;
+    // Repetir un relleno acumula su transparencia y el panel se ve más oscuro que los demás.
+    const claves = simbolo.paths.map((p) => JSON.stringify([p.t, p.c, p.p, p.c_, p.r, p.closed]));
+    assert.equal(new Set(claves).size, claves.length, `${codigo}: no tiene trazados repetidos`);
+
+    const circulos = simbolo.paths.filter((p) => p.t === 'circle');
+    const rellenos = simbolo.paths.filter((p) => p.t === 'fill');
+    assert.ok(rellenos.length <= 1, `${codigo}: un solo relleno (el cuerpo del panel)`);
+    for (const relleno of rellenos) {
+      const xs = relleno.p.map((q) => q[0]);
+      const ys = relleno.p.map((q) => q[1]);
+      const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+      const cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+      assert.ok(!circulos.some((c) => Math.abs(c.c_[0] - cx) < 0.002 && Math.abs(c.c_[1] - cy) < 0.002), `${codigo}: las columnas no se rellenan, quedan huecas`);
+    }
+  }
+});
+
 test('lote inexistente da 404', async () => {
   assert.equal((await llamar('oper1', 'GET', '/lotes/999999/croquis')).status, 404);
   assert.equal((await llamar('oper1', 'PUT', '/lotes/999999/croquis', { paredes: [], materiales: [] })).status, 404);

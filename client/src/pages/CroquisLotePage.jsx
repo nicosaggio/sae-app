@@ -1065,8 +1065,9 @@ export function CroquisLotePage() {
                 transform={`translate(${m.x},${m.y}) rotate(${m.rotacion}, ${(m.ancho || 0) / 2}, ${(m.profundidad || 0) / 2})`}
                 onMouseDown={(e) => iniciarArrastre(e, i)}
                 onClick={(e) => e.stopPropagation()}
-                // En modo paredes o cotas los clicks pasan "a través" de los materiales, para poder marcar puntos sobre ellos.
-                style={{ cursor: 'move', pointerEvents: modo === 'materiales' ? 'auto' : 'none' }}
+                // En modo paredes o cotas, o mientras se coloca un material nuevo, los clicks pasan "a través" de los
+                // materiales ya dibujados: así se puede marcar un punto, o apoyar un bloque, justo encima de otro.
+                style={{ cursor: 'move', pointerEvents: modo === 'materiales' && !itemParaColocar ? 'auto' : 'none' }}
               >
                 {/* Área de agarre invisible: sin ella, un símbolo hecho de líneas finas sólo se puede mover agarrando justo una línea. */}
                 <rect
