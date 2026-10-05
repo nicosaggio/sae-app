@@ -1,9 +1,8 @@
 # SAE-APP — Presupuestos de eventos
 
 Aplicación web interna para gestionar presupuestos de expositores por evento: calendario,
-estado de facturación/cobro, totales por rubro, export a PDF y un import automático de los
-presupuestos confirmados en Excel. Pensada para la red local de la oficina (no requiere
-internet).
+estado de facturación/cobro, totales por rubro, export a PDF, catálogo de precios y croquis de
+stands. Pensada para la red local de la oficina.
 
 ## Stack
 
@@ -34,7 +33,7 @@ npm run build
 
 La primera vez que se inicia el servidor, se crean automáticamente:
 - El archivo de base de datos `server/data/saeapp.db` con todas las tablas.
-- Un usuario administrador inicial: **usuario `admin`, contraseña `admin123`**.
+- Un usuario administrador inicial: **usuario `admin`, contraseña `admin123`** (cambiala al primer ingreso).
 
 Apenas puedas ingresar como `admin`, entrá a **"Usuarios"** (menú lateral, solo visible para
 administradores) y creá un usuario para cada persona que va a usar el sistema, y cambiá la
@@ -133,25 +132,18 @@ puede copiar aparte como respaldo extra.
 
 ---
 
-## 7) Import automático de presupuestos
+## 7) Import automático de presupuestos desde Excel (retirado)
 
-El servidor revisa cada 10 minutos la carpeta de red configurada en `server/.env`
-(`SAE_IMPORT_DIR`, por defecto
-`\\ARQ01\ANSELMI Trabajos\TRABAJOS 2026\SAE\PRESUPUESTOS EXCEL\CONFIRMADO`), lee cada Excel
-de presupuesto confirmado y crea/actualiza el lote y presupuesto correspondiente (agrupando
-por evento según el nombre del EXPO). Requiere que la PC servidor tenga acceso de lectura a
-esa carpeta con la cuenta de Windows que corre el servidor.
+Los presupuestos se cargan directamente en la app (ver 9), así que **el import automático desde
+Excel ya no existe**: no hay tarea que revise la carpeta de red, ni pantalla "Importaciones", ni
+la variable `SAE_IMPORT_DIR` (se puede borrar de `server/.env`).
 
-**"Importaciones"** (menú lateral) muestra lo que necesita revisión humana:
-- **Eventos sin fecha**: se creó el evento automáticamente porque el EXPO del archivo no
-  existía todavía — falta completar lugar y fechas reales.
-- **Nombres de evento ambiguos**: el EXPO matchea más de un evento (pasa con expos que se
-  repiten en el año, ej. la misma feria en dos fechas distintas) — hay que elegir cuál es.
-- **Posibles reemplazos**: un archivo desapareció de la carpeta y apareció uno nuevo para el
-  mismo lote — puede ser una revisión del mismo presupuesto o dos presupuestos distintos.
+Lo que se había importado **no se tocó**: los lotes, presupuestos y líneas que vinieron de Excel
+siguen en la base y se ven y editan igual que antes (están marcados con origen "Excel"). Las
+tablas del import quedan en la base como historial. Ese import además **borraba** los
+presupuestos de Excel cuyo archivo desaparecía de la carpeta; ya nada los borra.
 
-Hay un botón **"Escanear ahora"** para forzar una revisión sin esperar los 10 minutos. Si la
-carpeta de red no responde, el escaneo simplemente reintenta en el siguiente ciclo.
+El catálogo (sección 8) sigue importando sus propios Excel de precios.
 
 ---
 
@@ -346,13 +338,11 @@ npm test --workspace=server
 
 ## 9) Presupuestos cargados desde la app
 
-Además de los presupuestos que entran desde el Excel, se pueden armar directamente en la app con
-los precios del catálogo e imprimir en PDF. Se hace desde **Presupuestos → "+ Nuevo presupuesto"**.
+Los presupuestos se arman directamente en la app con los precios del catálogo y se imprimen en PDF. Se hace desde **Presupuestos → "+ Nuevo presupuesto"**.
 
 Cada presupuesto tiene tres estados:
 - **Pendiente de confirmación**: se está armando o ya se le mandó al cliente. Es invisible para el
-  resto de la app: no aparece en el calendario, los totales, las alertas, el export del evento ni
-  lo toca el import de Excel.
+  resto de la app: no aparece en el calendario, los totales, las alertas ni el export del evento.
 - **Confirmado**: cuando el cliente acepta, se confirma con un botón y pasa a formar parte del
   evento. Desde ahí es un presupuesto más y funciona con todo lo que ya existía.
 - **Rechazado**: cuando el cliente no lo acepta, se marca como rechazado con un botón en vez de
@@ -407,17 +397,32 @@ Hacen falta el evento, el número de stand (lote), al menos un ítem y que todos
 falta algo, la pantalla dice qué. Al confirmar:
 - Se busca o crea el lote del evento (con el número y el nombre del stand).
 - Se crea el presupuesto del evento, marcado con origen **App**, en estado "Pendiente de
-  facturar", con el total con IVA como monto, y sus ítems con el precio unitario (sin IVA), como
-  hacen los que vienen del Excel.
+  facturar", con el total con IVA como monto, y sus ítems con el precio unitario (sin IVA), igual
+  que los que se importaron antes desde Excel.
+- Si el presupuesto tiene un **croquis dibujado** (9.4), pasa también al lote para que salga en el
+  PDF de totales del evento. Si el lote ya tenía un croquis (de otro presupuesto del mismo stand),
+  se conserva ese y no se pisa; la pantalla avisa qué pasó.
 - El presupuesto original queda **cerrado**: para cambiarlo se edita dentro del evento. Desde la
   ventana Presupuestos, al abrir uno de origen App hay un enlace al original (PDF y adjuntos).
 
-Conviene **no cargar el mismo stand también como Excel** en la carpeta CONFIRMADO: quedaría
-duplicado.
+### 9.4) Croquis del stand y planos adjuntos
 
-### 9.4) Croquis y planos adjuntos
+**Croquis dibujado en la app.** En la ficha de un presupuesto, la tarjeta **"Croquis del stand"**
+tiene el botón **"Dibujar croquis"** (o **"Editar croquis"**), que abre el mismo editor de la
+sección 10 (paredes, materiales del catálogo, cotas y comentarios). Se dibuja mientras el
+presupuesto está **pendiente**: confirmado o rechazado se puede ver pero no modificar (el croquis
+del stand se sigue editando desde el lote, sección 10).
 
-Cada presupuesto admite hasta 10 adjuntos: imágenes **JPG o PNG** y archivos **PDF** de hasta
+- **Casilla "Incluir el croquis en el PDF del presupuesto"**: elige si el croquis sale o no. Viene
+  tildada al dibujarlo y se puede cambiar siempre, incluso con el presupuesto confirmado.
+- Sale en el PDF del presupuesto como la sección **"Croquis del stand"**, después de las
+  condiciones: el dibujo a escala con sus cotas y, si escribiste comentarios, el cuadro de
+  comentarios a la derecha. Si no entra en lo que queda de la hoja, pasa a una hoja nueva con el
+  encabezado del presupuesto; nunca se parte.
+- Al **duplicar** un presupuesto se copia también su croquis.
+
+**Planos adjuntos (archivos).** Para subir un plano o croquis que ya está hecho en otro programa
+(imagen o PDF), se usa la tarjeta **"Planos y archivos adjuntos"**. Cada presupuesto admite hasta 10 adjuntos: imágenes **JPG o PNG** y archivos **PDF** de hasta
 25 MB cada uno. Se aceptan por su contenido real (no por la extensión); no se aceptan PDF con
 contraseña ni archivos dañados. Las fotos grandes se reducen a 2.400 px y las de celular se
 enderezan.
@@ -440,6 +445,9 @@ hay que correr `npm install` y `npm run build`, y reiniciar el servidor. Las tab
 modifican ninguna tabla existente** (solo agregan una columna a la tabla de presupuestos de la
 app).
 
+El croquis dentro del presupuesto agrega la tabla `cotizacion_croquis` (migración
+`0017_cotizacion_croquis.sql`), que se crea sola al arrancar y no modifica ninguna otra tabla.
+
 ### 9.6) Clientes guardados, por CUIT
 
 Los clientes se guardan solos, con el **CUIT como clave**, cada vez que se guardan los datos de
@@ -461,8 +469,8 @@ un presupuesto. Se ven y se corrigen en el menú **Clientes**.
 - Al arrancar el servidor, los presupuestos que ya estaban cargados con un CUIT válido se guardan
   como clientes (una sola vez; no hace nada si no hay nada para completar).
 
-Los presupuestos que vienen del Excel no cargan clientes por ahora: el import automático no lee el
-CUIT.
+Los presupuestos que se importaron antes desde Excel no tienen clientes guardados: ese import no leía
+el CUIT.
 
 ---
 
@@ -476,7 +484,8 @@ dibujado no agrega nada al PDF.
 ### 10.1) Cómo se dibuja
 
 En el panel de cada lote hay un botón **"Dibujar croquis"** (o **"Ver croquis"** si ya tiene uno
-guardado), que abre un editor:
+guardado), que abre un editor. Es el mismo que se abre desde la ficha de un presupuesto de la app
+(sección 9.4):
 - **Paredes**: se marcan clic a clic, con imán a la grilla cada 10 cm.
 - **Materiales**: se elige uno de la paleta (con buscador y agrupados por rubro) y se hace clic
   sobre el plano para colocarlo; queda seleccionado para seguir colocando el mismo varias veces
@@ -507,7 +516,10 @@ pieza, **Supr** = borrar, **Ctrl+A** = seleccionar todo, **Esc** = cancelar.
 ### 10.2) Símbolos disponibles
 
 Los símbolos salen del archivo DXF de AutoCAD de la empresa ("Sistema 27") y mantienen el color
-original de cada bloque. **No todos los ítems del catálogo tienen un símbolo**: donde no hay un
+original de cada bloque, **salvo los paneles (blancos, cerezo, negros, vidriado, costilla) y las
+columnas, que se dibujan todos del mismo azul** (`#0000ff`, el de los paneles blancos) para que se
+lean como una sola pared. Ese color está en `server/src/data/croquisSimbolos.json`; si algún día se
+vuelve a extraer la biblioteca desde AutoCAD hay que volver a unificarlo (lo verifica un test). **No todos los ítems del catálogo tienen un símbolo**: donde no hay un
 bloque genuino para ese ítem exacto, no se dibuja nada en vez de reemplazarlo por uno parecido. La
 biblioteca de símbolos vive en `server/src/data/croquisSimbolos.json` y no se genera desde el
 servidor: si hace falta agregar o corregir un símbolo, hay que volver a exportar el bloque desde
@@ -551,4 +563,38 @@ ni cotas. Hace falta `npm install && npm run build` en el cliente y reiniciar el
   pueda usar la app.
 - Si el servidor no responde desde otras PCs, fijate que la ventana de
   `iniciar-servidor.cmd` (o la tarea programada) siga activa, y que la IP no haya cambiado.
-- Usuario administrador inicial: `admin` / `admin123` (cambiala después del primer ingreso).
+- Usuario administrador inicial: `admin` / `admin123` (**cambiala de inmediato**: en Usuarios, las claves nuevas
+  tienen que tener al menos 8 caracteres).
+
+---
+
+## 12) Seguridad
+
+Lo que trae la app y cómo cuidarla.
+
+### 12.1) Lo que ya trae la app
+
+- **Límite de intentos de login**: 10 fallos por IP en 15 minutos bloquean esa IP un rato.
+- Cada login crea una **sesión nueva**. La clave con la que se firman las sesiones se genera sola la
+  primera vez y se guarda en `server/data/session-secret` (si se borra, se crea otra y todos tienen
+  que volver a entrar). También se puede fijar con `SESSION_SECRET` en `server/.env`.
+- Las **claves nuevas** tienen que tener al menos 8 caracteres.
+- Los errores internos no muestran rutas ni consultas de la base; solo "Error interno del servidor"
+  (el detalle queda en la consola del servidor).
+- Todas las rutas de datos exigen sesión; solo el login y `/api/health` están abiertos. Los permisos
+  (administrador / operador / "solo estado") se revisan en el servidor.
+- Encabezados de seguridad básicos en todas las respuestas. Si algún día la app se publica detrás de
+  un proxy que corre en esta misma PC, la cookie de sesión va marcada como segura cuando la conexión
+  llega por https; por la red local (http) todo funciona normal.
+- Se corrigieron los avisos de seguridad de las dependencias (`npm audit` en 0). `xlsx` se instala
+  desde el sitio oficial de SheetJS porque la versión de npm está abandonada y tiene fallas
+  conocidas: por eso `npm install` necesita acceso a `cdn.sheetjs.com`.
+
+### 12.2) Cuidados
+
+- **Cambiá la clave de `admin` y de todos los usuarios** a una de 8+ caracteres que no se use en
+  otro lado. Quien se va del equipo: **Usuarios → desactivar** (corta su acceso al instante).
+- **Backups**: la app guarda uno por día a las 03:00 en `server/data/backups`, pero en la *misma
+  PC*. Copiá la carpeta `server/data/` completa (base, backups, fotos del catálogo y adjuntos de
+  presupuestos, que no entran en el backup automático) a otro disco o a la nube cada tanto.
+- Cada tanto: `npm audit` y actualizar Node.

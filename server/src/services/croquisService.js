@@ -1,5 +1,5 @@
 /**
- * Croquis (plano de planta) de un lote: paredes sueltas + materiales del catálogo colocados con
+ * Croquis (plano de planta) de un lote o de un presupuesto de la app: paredes sueltas + materiales del catálogo colocados con
  * posición y rotación. La biblioteca de símbolos dibujables (geometría + color, extraída del
  * AutoCAD real de la empresa) vive en data/croquisSimbolos.json — sólo cubre los ítems de
  * catálogo para los que se encontró un símbolo genuino; un ítem sin símbolo no es elegible para
@@ -33,7 +33,7 @@ function bloqueAuxiliar(bloque) {
   return simbolo && simbolo.auxiliar ? simbolo : undefined;
 }
 
-function armar(fila) {
+function armar(fila, almacen = ALMACEN_LOTE) {
   if (!fila) return null;
   const materiales = parseJsonArray(fila.materiales);
   const ids = [...new Set(materiales.map((m) => m.catalogo_item_id).filter((id) => Number.isInteger(id)))];
@@ -42,7 +42,8 @@ function armar(fila) {
     : [];
   const porId = new Map(items.map((i) => [i.id, i]));
   return {
-    lote_id: fila.lote_id,
+    [almacen.columna]: fila[almacen.columna],
+    ...(almacen.conIncluirEnPdf ? { incluir_en_pdf: Boolean(fila.incluir_en_pdf) } : {}),
     paredes: parseJsonArray(fila.paredes),
     materiales: materiales.map((m) => {
       const auxiliar = bloqueAuxiliar(m.bloque);
@@ -70,10 +71,22 @@ function exigirLote(loteId) {
   if (!db.prepare('SELECT id FROM lotes WHERE id = ?').get(loteId)) throw error(404, 'Lote no encontrado');
 }
 
-function obtener(loteId) {
-  exigirLote(loteId);
-  return armar(db.prepare('SELECT * FROM lote_croquis WHERE lote_id = ?').get(loteId));
+function exigirCotizacion(cotizacionId) {
+  if (!db.prepare('SELECT id FROM cotizaciones WHERE id = ?').get(cotizacionId)) throw error(404, 'Presupuesto no encontrado');
 }
+
+// El croquis se guarda igual en dos lugares: en el lote (el definitivo, el que sale en los totales del
+// evento) y en el presupuesto de la app mientras el lote todavía no existe (se crea al confirmarlo).
+// Los nombres de tabla y de columna son constantes de acá, nunca vienen del usuario.
+const ALMACEN_LOTE = { tabla: 'lote_croquis', columna: 'lote_id', exigir: exigirLote };
+const ALMACEN_COTIZACION = { tabla: 'cotizacion_croquis', columna: 'cotizacion_id', exigir: exigirCotizacion, conIncluirEnPdf: true };
+
+function obtenerDe(almacen, id) {
+  almacen.exigir(id);
+  return armar(db.prepare(`SELECT * FROM ${almacen.tabla} WHERE ${almacen.columna} = ?`).get(id), almacen);
+}
+
+const obtener = (loteId) => obtenerDe(ALMACEN_LOTE, loteId);
 
 function numero(valor, campo) {
   if (typeof valor !== 'number' || !Number.isFinite(valor)) throw error(400, `"${campo}" tiene que ser un número`);
@@ -139,22 +152,23 @@ function normalizarCotas(cotas) {
   }));
 }
 
-function guardar(loteId, { paredes, materiales, cotas, comentarios } = {}, usuario) {
-  exigirLote(loteId);
+function guardarEn(almacen, id, { paredes, materiales, cotas, comentarios } = {}, usuario) {
+  almacen.exigir(id);
   const paredesJson = JSON.stringify(normalizarParedes(paredes || []));
   const materialesJson = JSON.stringify(normalizarMateriales(materiales || []));
   const cotasLimpias = normalizarCotas(cotas);
   const cotasJson = cotasLimpias === undefined ? null : JSON.stringify(cotasLimpias);
   const comentariosLimpios = normalizarComentarios(comentarios);
 
-  const existente = db.prepare('SELECT id FROM lote_croquis WHERE lote_id = ?').get(loteId);
+  const { tabla, columna } = almacen;
+  const existente = db.prepare(`SELECT id FROM ${tabla} WHERE ${columna} = ?`).get(id);
   if (existente) {
     db.prepare(
-      `UPDATE lote_croquis SET paredes = ?, materiales = ?, cotas = COALESCE(?, cotas), comentarios = COALESCE(?, comentarios), actualizado_en = datetime('now') WHERE lote_id = ?`
-    ).run(paredesJson, materialesJson, cotasJson, comentariosLimpios ?? null, loteId);
+      `UPDATE ${tabla} SET paredes = ?, materiales = ?, cotas = COALESCE(?, cotas), comentarios = COALESCE(?, comentarios), actualizado_en = datetime('now') WHERE ${columna} = ?`
+    ).run(paredesJson, materialesJson, cotasJson, comentariosLimpios ?? null, id);
   } else {
-    db.prepare('INSERT INTO lote_croquis (lote_id, paredes, materiales, cotas, comentarios, creado_por) VALUES (?, ?, ?, ?, ?, ?)').run(
-      loteId,
+    db.prepare(`INSERT INTO ${tabla} (${columna}, paredes, materiales, cotas, comentarios, creado_por) VALUES (?, ?, ?, ?, ?, ?)`).run(
+      id,
       paredesJson,
       materialesJson,
       cotasJson ?? '[]',
@@ -162,12 +176,75 @@ function guardar(loteId, { paredes, materiales, cotas, comentarios } = {}, usuar
       usuario.id
     );
   }
-  return obtener(loteId);
+  return obtenerDe(almacen, id);
 }
 
-function eliminar(loteId) {
-  exigirLote(loteId);
-  db.prepare('DELETE FROM lote_croquis WHERE lote_id = ?').run(loteId);
+function eliminarDe(almacen, id) {
+  almacen.exigir(id);
+  db.prepare(`DELETE FROM ${almacen.tabla} WHERE ${almacen.columna} = ?`).run(id);
+}
+
+const guardar = (loteId, datos, usuario) => guardarEn(ALMACEN_LOTE, loteId, datos, usuario);
+const eliminar = (loteId) => eliminarDe(ALMACEN_LOTE, loteId);
+
+// --- Croquis de un presupuesto de la app (cotización) -------------------------------------------
+
+const obtenerDeCotizacion = (cotizacionId) => obtenerDe(ALMACEN_COTIZACION, cotizacionId);
+const guardarDeCotizacion = (cotizacionId, datos, usuario) => guardarEn(ALMACEN_COTIZACION, cotizacionId, datos, usuario);
+const eliminarDeCotizacion = (cotizacionId) => eliminarDe(ALMACEN_COTIZACION, cotizacionId);
+
+/** Si el croquis sale o no en el PDF del presupuesto. */
+function definirIncluirEnPdf(cotizacionId, incluir) {
+  exigirCotizacion(cotizacionId);
+  if (typeof incluir !== 'boolean') throw error(400, '"incluir_en_pdf" tiene que ser verdadero o falso');
+  const info = db
+    .prepare("UPDATE cotizacion_croquis SET incluir_en_pdf = ?, actualizado_en = datetime('now') WHERE cotizacion_id = ?")
+    .run(incluir ? 1 : 0, cotizacionId);
+  if (info.changes === 0) throw error(404, 'Este presupuesto todavía no tiene un croquis dibujado');
+  return obtenerDeCotizacion(cotizacionId);
+}
+
+/** Datos de la ficha del presupuesto, sin traer todo el dibujo; null si todavía no dibujaron uno. */
+function resumenDeCotizacion(cotizacionId) {
+  const fila = db.prepare('SELECT paredes, materiales, cotas, comentarios, incluir_en_pdf FROM cotizacion_croquis WHERE cotizacion_id = ?').get(cotizacionId);
+  if (!fila) return null;
+  return {
+    paredes: parseJsonArray(fila.paredes).length,
+    materiales: parseJsonArray(fila.materiales).length,
+    cotas: parseJsonArray(fila.cotas).length,
+    con_comentarios: Boolean((fila.comentarios || '').trim()),
+    incluir_en_pdf: Boolean(fila.incluir_en_pdf),
+  };
+}
+
+/** Copia el croquis de un presupuesto a otro (al duplicarlo). Devuelve si había algo para copiar. */
+function copiarDeCotizacion(origenId, destinoId, usuario) {
+  const fila = db.prepare('SELECT * FROM cotizacion_croquis WHERE cotizacion_id = ?').get(origenId);
+  if (!fila) return false;
+  db.prepare(
+    'INSERT INTO cotizacion_croquis (cotizacion_id, paredes, materiales, cotas, comentarios, incluir_en_pdf, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(destinoId, fila.paredes, fila.materiales, fila.cotas, fila.comentarios, fila.incluir_en_pdf, usuario.id);
+  return true;
+}
+
+/**
+ * Al confirmar el presupuesto el croquis pasa al lote, para que salga en el PDF de totales del evento.
+ * Si el lote ya tenía un croquis (de otro presupuesto del mismo stand) no se lo pisa. Devuelve
+ * 'copiado', 'lote_ya_tenia' o 'sin_croquis'.
+ */
+function copiarALote(cotizacionId, loteId, usuario) {
+  const fila = db.prepare('SELECT * FROM cotizacion_croquis WHERE cotizacion_id = ?').get(cotizacionId);
+  if (!fila) return 'sin_croquis';
+  if (db.prepare('SELECT 1 FROM lote_croquis WHERE lote_id = ?').get(loteId)) return 'lote_ya_tenia';
+  db.prepare('INSERT INTO lote_croquis (lote_id, paredes, materiales, cotas, comentarios, creado_por) VALUES (?, ?, ?, ?, ?, ?)').run(
+    loteId,
+    fila.paredes,
+    fila.materiales,
+    fila.cotas,
+    fila.comentarios,
+    usuario.id
+  );
+  return 'copiado';
 }
 
 /**
@@ -188,4 +265,16 @@ function simbolosDisponibles() {
   return salida;
 }
 
-module.exports = { obtener, guardar, eliminar, simbolosDisponibles };
+module.exports = {
+  obtener,
+  guardar,
+  eliminar,
+  obtenerDeCotizacion,
+  guardarDeCotizacion,
+  eliminarDeCotizacion,
+  definirIncluirEnPdf,
+  resumenDeCotizacion,
+  copiarDeCotizacion,
+  copiarALote,
+  simbolosDisponibles,
+};

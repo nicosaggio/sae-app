@@ -109,6 +109,25 @@ router.post('/:id/adjuntos', bloquearSiSoloEstado, (req, res, next) => {
   });
 });
 
+// --- Croquis dibujado en el presupuesto ---------------------------------------------------------
+
+router.get('/:id/croquis', (req, res) => {
+  res.json(cotizaciones.obtenerCroquis(Number(req.params.id)));
+});
+
+router.put('/:id/croquis', bloquearSiSoloEstado, (req, res) => {
+  res.json(cotizaciones.guardarCroquis(Number(req.params.id), req.body || {}, req.usuario));
+});
+
+router.put('/:id/croquis/pdf', bloquearSiSoloEstado, (req, res) => {
+  res.json(cotizaciones.definirCroquisEnPdf(Number(req.params.id), (req.body || {}).incluir_en_pdf));
+});
+
+router.delete('/:id/croquis', bloquearSiSoloEstado, (req, res) => {
+  cotizaciones.eliminarCroquis(Number(req.params.id));
+  res.json({ ok: true });
+});
+
 router.post('/:id/lista', bloquearSiSoloEstado, (req, res) => {
   res.json(cotizaciones.aplicarLista(Number(req.params.id), (req.body || {}).version_id));
 });

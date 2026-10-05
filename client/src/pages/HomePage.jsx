@@ -13,7 +13,7 @@ function rangoProximos(dias) {
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { usuario, puedeEscribir } = useAuth();
+  const { usuario } = useAuth();
   const { desde, hasta } = rangoProximos(30);
 
   const { datos: alertas, cargando: cargandoAlertas } = usePolling(
@@ -25,11 +25,6 @@ export function HomePage() {
     () => api.get(`/eventos?desde=${desde}&hasta=${hasta}&con_presupuestos=1`),
     30000,
     [desde, hasta]
-  );
-  const { datos: estadoImport, cargando: cargandoImport } = usePolling(
-    () => api.get('/importaciones/estado'),
-    30000,
-    []
   );
 
   const proximosEventos = (eventos || [])
@@ -96,30 +91,6 @@ export function HomePage() {
             </>
           )}
         </div>
-
-        {puedeEscribir && (
-          <div className="card">
-            <div className="toolbar" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-              <h3 style={{ margin: 0 }}>Importaciones pendientes</h3>
-              {estadoImport && estadoImport.total > 0 && <span className="badge tipo">{estadoImport.total}</span>}
-            </div>
-            {cargandoImport ? (
-              <p className="texto-suave">Cargando…</p>
-            ) : !estadoImport || estadoImport.total === 0 ? (
-              <p className="texto-suave">Todo al día.</p>
-            ) : (
-              <>
-                <p className="texto-suave">
-                  {estadoImport.pendientes} pendiente{estadoImport.pendientes === 1 ? '' : 's'} de revisión
-                  {estadoImport.eventosSinFecha > 0 &&
-                    `, ${estadoImport.eventosSinFecha} evento${estadoImport.eventosSinFecha === 1 ? '' : 's'} sin fecha`}
-                  .
-                </p>
-                <button onClick={() => navigate('/importaciones')}>Revisar</button>
-              </>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

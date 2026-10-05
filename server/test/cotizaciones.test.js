@@ -8,15 +8,12 @@ const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'saeapp-cot-'));
 process.env.DB_PATH = path.join(carpeta, 'test.db');
 process.env.CATALOGO_IMG_DIR = path.join(carpeta, 'img');
 process.env.BACKUPS_DIR = path.join(carpeta, 'backups');
-process.env.SAE_IMPORT_DIR = path.join(carpeta, 'excel-vacio'); // el import automático mira una carpeta vacía
-fs.mkdirSync(process.env.SAE_IMPORT_DIR);
 
 const bcrypt = require('bcryptjs');
 const { db } = require('../src/db/connection');
 const { run: migrar } = require('../src/db/migrate');
 const { createApp } = require('../src/app');
 const cot = require('../src/services/cotizacionesService');
-const { escanear } = require('../src/services/excelImportService');
 const { sembrarCatalogoDePrueba } = require('./helpers/catalogoDePrueba');
 
 let servidor;
@@ -372,7 +369,7 @@ test('un presupuesto nuevo puede pasar a usar una lista del historial de la Gene
 // ---------------------------------------------------------------------------------------------
 
 test('mientras están pendientes, los presupuestos nuevos no cambian nada de lo que ya existe', async () => {
-  const rutas = ['/eventos', `/eventos/${eventoConDatos}`, `/eventos/${eventoConDatos}/totales`, `/eventos/${eventoConDatos}/facturacion`, `/eventos/${eventoUno}`, `/eventos/${eventoUno}/facturacion`, '/presupuestos', '/presupuestos?confirmado=0', '/presupuestos/alertas', '/productos', '/importaciones/estado', '/importaciones/pendientes'];
+  const rutas = ['/eventos', `/eventos/${eventoConDatos}`, `/eventos/${eventoConDatos}/totales`, `/eventos/${eventoConDatos}/facturacion`, `/eventos/${eventoUno}`, `/eventos/${eventoUno}/facturacion`, '/presupuestos', '/presupuestos?confirmado=0', '/presupuestos/alertas', '/productos'];
   const foto = async () => Object.fromEntries(await Promise.all(rutas.map(async (r) => [r, JSON.stringify((await llamar('admin1', 'GET', r)).cuerpo)])));
   const antes = await foto();
   const contadores = () => ({ ...db.prepare('SELECT (SELECT COUNT(*) FROM presupuestos) p, (SELECT COUNT(*) FROM lotes) l, (SELECT COUNT(*) FROM productos) pr, (SELECT COUNT(*) FROM presupuesto_lineas) pl').get() });
@@ -481,19 +478,21 @@ test('dos presupuestos del mismo stand van al mismo lote del evento (no se dupli
   assert.equal(db.prepare('SELECT lote_id FROM presupuestos WHERE id = ?').get(a.presupuesto_id).lote_id, db.prepare('SELECT lote_id FROM presupuestos WHERE id = ?').get(b.presupuesto_id).lote_id);
 });
 
-test('el import automático de Excel no toca los presupuestos de la app (y sí borra los de Excel cuyo archivo ya no está en la carpeta)', () => {
+test('ya no existe el import automático de Excel: los presupuestos que vinieron de Excel quedan como están y nada los borra', async () => {
   const cuenta = (origen) => db.prepare('SELECT COUNT(*) n FROM presupuestos WHERE origen = ?').get(origen).n;
-  const deLaApp = cuenta('app');
-  assert.ok(deLaApp >= 3, 'hay presupuestos de la app confirmados');
+  assert.ok(cuenta('app') >= 3, 'hay presupuestos de la app confirmados');
   assert.equal(cuenta('excel'), 1, 'y el de Excel del que se partió');
+  const lineasDelExcel = db.prepare("SELECT COUNT(*) n FROM presupuesto_lineas pl JOIN presupuestos p ON p.id = pl.presupuesto_id WHERE p.origen = 'excel'").get().n;
 
-  const { resumen } = escanear(); // la carpeta de Excel está vacía
-  assert.equal(resumen.huerfanos, 1);
-  assert.equal(resumen.borrados, 1, 'el de Excel, sin archivo, se borra: así funciona el import');
-  assert.equal(cuenta('excel'), 0);
-  assert.equal(cuenta('app'), deLaApp, 'los de la app siguen todos');
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM presupuestos WHERE origen = 'app' AND archivo_activo = 0").get().n, 0);
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM presupuesto_lineas pl JOIN presupuestos p ON p.id = pl.presupuesto_id WHERE p.origen = 'app'").get().n >= 4, true, 'con sus líneas');
+  // Las pantallas y rutas del import ya no están.
+  for (const ruta of ['/importaciones/estado', '/importaciones/pendientes']) {
+    assert.equal((await llamar('admin1', 'GET', ruta)).status, 404, ruta);
+  }
+  assert.equal((await llamar('admin1', 'POST', '/importaciones/escanear-ahora')).status, 404);
+  assert.throws(() => require('../src/services/excelImportService'), /Cannot find module/, 'el servicio que escaneaba la carpeta y borraba los "huérfanos" ya no existe');
+
+  assert.equal(cuenta('excel'), 1, 'el presupuesto de Excel sigue');
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM presupuesto_lineas pl JOIN presupuestos p ON p.id = pl.presupuesto_id WHERE p.origen = 'excel'").get().n, lineasDelExcel, 'con todas sus líneas');
 });
 
 // ---------------------------------------------------------------------------------------------

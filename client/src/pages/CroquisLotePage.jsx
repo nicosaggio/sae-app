@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const SNAP = 0.1; // metros: redondea los clics a esta grilla para que quede prolijo
 const CAMARA_W_MIN = 0.8;
@@ -378,7 +379,12 @@ function Paleta({ simbolos, busqueda, setBusqueda, itemParaColocar, setItemParaC
 }
 
 export function CroquisLotePage() {
-  const { eventoId, loteId } = useParams();
+  // La misma pantalla dibuja el croquis de un lote (/eventos/:eventoId/lotes/:loteId/croquis) y el de un
+  // presupuesto de la app (/presupuestos/carga/:id/croquis), que todavía no tiene lote.
+  const { eventoId, loteId, id: cotizacionId } = useParams();
+  const esPresupuesto = cotizacionId !== undefined;
+  const rutaCroquis = esPresupuesto ? `/cotizaciones/${cotizacionId}/croquis` : `/lotes/${loteId}/croquis`;
+  const { puedeEscribir } = useAuth();
   const svgRef = useRef(null);
   const arrastreRef = useRef(null);
   const paneoRef = useRef(null);
@@ -386,7 +392,7 @@ export function CroquisLotePage() {
   const huboArrastreRectRef = useRef(false);
   const portapapelesRef = useRef([]);
 
-  const [evento, setEvento] = useState(null);
+  const [contexto, setContexto] = useState(null); // el evento (con sus lotes) o el presupuesto
   const [simbolos, setSimbolos] = useState({});
   const [paredes, setParedes] = useState([]);
   const [materiales, setMateriales] = useState([]);
@@ -418,9 +424,9 @@ export function CroquisLotePage() {
 
   useEffect(() => {
     setCargando(true);
-    Promise.all([api.get(`/eventos/${eventoId}`), api.get('/catalogo/croquis-simbolos'), api.get(`/lotes/${loteId}/croquis`)])
-      .then(([ev, sim, cr]) => {
-        setEvento(ev);
+    Promise.all([api.get(esPresupuesto ? `/cotizaciones/${cotizacionId}` : `/eventos/${eventoId}`), api.get('/catalogo/croquis-simbolos'), api.get(rutaCroquis)])
+      .then(([ctx, sim, cr]) => {
+        setContexto(ctx);
         setSimbolos(sim);
         const pr = cr ? cr.paredes : [];
         const ma = cr ? cr.materiales : [];
@@ -437,9 +443,12 @@ export function CroquisLotePage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setCargando(false));
-  }, [eventoId, loteId]);
+  }, [eventoId, loteId, cotizacionId, esPresupuesto, rutaCroquis]);
 
-  const lote = evento?.lotes.find((l) => l.id === Number(loteId));
+  const lote = esPresupuesto ? null : contexto?.lotes?.find((l) => l.id === Number(loteId));
+  // Un presupuesto confirmado o rechazado ya no se dibuja (al confirmarlo el croquis pasó al lote), y un
+  // usuario que sólo puede cambiar estados no edita nada: en esos casos la pantalla es sólo para mirar.
+  const soloLectura = !puedeEscribir || (esPresupuesto && contexto?.estado !== 'pendiente');
 
   // Mantiene la proporción ancho/alto del SVG tal como se renderiza (para que 1m sea igual en X e Y).
   useEffect(() => {
@@ -475,7 +484,8 @@ export function CroquisLotePage() {
     }
     el.addEventListener('wheel', alRueda, { passive: false });
     return () => el.removeEventListener('wheel', alRueda);
-  }, [aspecto]);
+    // `cargando`: el lienzo recién existe cuando termina de cargar; sin esto el zoom no se engancha si el aspecto no cambia.
+  }, [aspecto, cargando]);
 
   // Arrastre de materiales (uno o en grupo), selección por rectángulo y paneo: se escuchan en toda
   // la ventana para no perder el movimiento si el mouse sale un instante del SVG.
@@ -559,6 +569,7 @@ export function CroquisLotePage() {
     function alTeclear(e) {
       const enCampo = document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
       const ctrl = e.ctrlKey || e.metaKey;
+      if (soloLectura && e.key !== 'Escape') return;
       if (e.key === 'Escape') {
         setItemParaColocar(null);
         setPuntoEnCurso(null);
@@ -594,7 +605,7 @@ export function CroquisLotePage() {
       setPaneando(true);
       return;
     }
-    if (e.button === 0 && modo === 'materiales' && !itemParaColocar) {
+    if (e.button === 0 && modo === 'materiales' && !itemParaColocar && !soloLectura) {
       const p = puntoSvgCrudo(e, svgRef.current);
       seleccionRectRef.current = { inicio: p, actual: p };
       setRectSeleccion({ inicio: p, actual: p });
@@ -602,6 +613,7 @@ export function CroquisLotePage() {
   }
 
   function alClickFondo(e) {
+    if (soloLectura) return;
     if (huboArrastreRectRef.current) {
       huboArrastreRectRef.current = false;
       return;
@@ -736,6 +748,7 @@ export function CroquisLotePage() {
 
   function iniciarArrastre(e, index) {
     e.stopPropagation();
+    if (soloLectura) return;
     if (itemParaColocar) return;
     if (e.shiftKey) {
       setSeleccionados((s) => {
@@ -827,7 +840,7 @@ export function CroquisLotePage() {
     setError('');
     setAviso('');
     try {
-      await api.put(`/lotes/${loteId}/croquis`, {
+      await api.put(rutaCroquis, {
         paredes,
         materiales: materiales.map((m) => ({ catalogo_item_id: m.catalogo_item_id, bloque: m.bloque, x: m.x, y: m.y, rotacion: m.rotacion })),
         cotas,
@@ -844,10 +857,10 @@ export function CroquisLotePage() {
   }
 
   async function eliminarCroquis() {
-    if (!confirm('¿Borrar todo el croquis de este lote? No se puede deshacer.')) return;
+    if (!confirm(`¿Borrar todo el croquis de ${esPresupuesto ? 'este presupuesto' : 'este lote'}? No se puede deshacer.`)) return;
     setError('');
     try {
-      await api.del(`/lotes/${loteId}/croquis`);
+      await api.del(rutaCroquis);
       setParedes([]);
       setMateriales([]);
       setCotas([]);
@@ -869,33 +882,59 @@ export function CroquisLotePage() {
   const cursor = modo === 'paredes' || modo === 'cotas' ? 'crosshair' : itemParaColocar ? 'copy' : paneando ? 'grabbing' : 'default';
 
   if (cargando) return <p className="texto-suave">Cargando…</p>;
-  if (error && !evento) return <div className="aviso error">{error}</div>;
+  if (error && !contexto) return <div className="aviso error">{error}</div>;
 
   return (
     <div>
       <p style={{ margin: '0 0 8px' }}>
-        <Link to={`/eventos/${eventoId}`}>← Volver al evento</Link>
+        {esPresupuesto ? <Link to={`/presupuestos/carga/${cotizacionId}`}>← Volver al presupuesto</Link> : <Link to={`/eventos/${eventoId}`}>← Volver al evento</Link>}
       </p>
       <h2 style={{ marginTop: 0 }}>
-        Croquis — Lote {lote?.codigo}
-        {lote?.expositor ? ` — ${lote.expositor}` : ''}
+        {esPresupuesto ? (
+          <>
+            Croquis — Presupuesto {contexto?.cod_fac || `N.º ${cotizacionId}`}
+            {contexto?.nombre_stand ? ` — ${contexto.nombre_stand}` : ''}
+          </>
+        ) : (
+          <>
+            Croquis — Lote {lote?.codigo}
+            {lote?.expositor ? ` — ${lote.expositor}` : ''}
+          </>
+        )}
       </h2>
 
       {error && <div className="aviso error">{error}</div>}
       {aviso && <div className="aviso exito">{aviso}</div>}
+      {soloLectura && (
+        <div className="aviso advertencia">
+          {!puedeEscribir
+            ? 'Tu usuario solo puede ver el croquis.'
+            : 'Este presupuesto ya no está pendiente, así que el croquis es de solo lectura. Si se confirmó, el croquis del stand se edita desde el lote.'}
+        </div>
+      )}
+      {esPresupuesto && !soloLectura && (
+        <p className="texto-suave" style={{ marginTop: 0 }}>
+          Este croquis sale en el PDF del presupuesto (en la ficha del presupuesto elegís si se incluye o no) y, al confirmarlo, pasa al lote del stand para el PDF de
+          totales del evento.
+        </p>
+      )}
 
       <div className="card">
         <div className="toolbar" style={{ justifyContent: 'space-between' }}>
           <div className="toolbar" style={{ marginBottom: 0 }}>
-            <button className={modo === 'materiales' ? 'primario' : undefined} onClick={() => cambiarModo('materiales')}>
-              Materiales
-            </button>
-            <button className={modo === 'paredes' ? 'primario' : undefined} onClick={() => cambiarModo('paredes')}>
-              Paredes
-            </button>
-            <button className={modo === 'cotas' ? 'primario' : undefined} onClick={() => cambiarModo('cotas')} title="Acotar medidas sobre el plano">
-              Cotas
-            </button>
+            {!soloLectura && (
+              <>
+                <button className={modo === 'materiales' ? 'primario' : undefined} onClick={() => cambiarModo('materiales')}>
+                  Materiales
+                </button>
+                <button className={modo === 'paredes' ? 'primario' : undefined} onClick={() => cambiarModo('paredes')}>
+                  Paredes
+                </button>
+                <button className={modo === 'cotas' ? 'primario' : undefined} onClick={() => cambiarModo('cotas')} title="Acotar medidas sobre el plano">
+                  Cotas
+                </button>
+              </>
+            )}
             <button onClick={centrarVista} title="Ajustar la vista a todo el contenido">
               Centrar vista
             </button>
@@ -930,22 +969,24 @@ export function CroquisLotePage() {
               </span>
             )}
           </div>
-          <div className="toolbar" style={{ marginBottom: 0 }}>
-            {sinGuardar && <span className="texto-suave">Hay cambios sin guardar</span>}
-            <button className="primario" onClick={guardar} disabled={guardando}>
-              {guardando ? 'Guardando…' : 'Guardar croquis'}
-            </button>
-            {existia && (
-              <button className="peligro" onClick={eliminarCroquis}>
-                Eliminar croquis
+          {!soloLectura && (
+            <div className="toolbar" style={{ marginBottom: 0 }}>
+              {sinGuardar && <span className="texto-suave">Hay cambios sin guardar</span>}
+              <button className="primario" onClick={guardar} disabled={guardando}>
+                {guardando ? 'Guardando…' : 'Guardar croquis'}
               </button>
-            )}
-          </div>
+              {existia && (
+                <button className="peligro" onClick={eliminarCroquis}>
+                  Eliminar croquis
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        {modo === 'materiales' && (
+        {!soloLectura && modo === 'materiales' && (
           <Paleta simbolos={simbolos} busqueda={busqueda} setBusqueda={setBusqueda} itemParaColocar={itemParaColocar} setItemParaColocar={setItemParaColocar} />
         )}
 
@@ -1113,6 +1154,7 @@ export function CroquisLotePage() {
             maxLength={COMENTARIOS_MAX}
             placeholder="Aclaraciones para el armado…"
             value={comentarios}
+            disabled={soloLectura}
             onChange={(e) => {
               setComentarios(e.target.value);
               setSinGuardar(true);

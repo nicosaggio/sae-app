@@ -22,10 +22,10 @@
     "express-session": "^1.18.0",
     "jimp": "^1.6.1",
     "multer": "^2.4.0",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.6.0",
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "pdfjs-dist": "^4.10.38"

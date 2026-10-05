@@ -12,6 +12,8 @@ const { errorHttp } = require('./catalogoCalculoService');
 const { formatearPesos, fechaLarga } = require('./catalogoPdfService');
 const cotizaciones = require('./cotizacionesService');
 const adjuntosService = require('./cotizacionAdjuntosService');
+const croquisService = require('./croquisService');
+const croquisPdf = require('./croquisPdf');
 
 const CARPETA_ASSETS = path.join(__dirname, '..', '..', 'assets');
 const LOGO = path.join(CARPETA_ASSETS, 'anselmi-logo.jpg');
@@ -245,6 +247,14 @@ function dibujarFila(doc, l, y, par) {
 // Documento
 // ---------------------------------------------------------------------------------------------
 
+/** El croquis dibujado en la app, o null si no hay, está vacío o se eligió que no salga en el PDF. */
+function croquisParaElPdf(id) {
+  const croquis = croquisService.obtenerDeCotizacion(id);
+  if (!croquis || !croquis.incluir_en_pdf) return null;
+  const hayDibujo = croquis.paredes.length + croquis.materiales.length + croquis.cotas.length > 0;
+  return hayDibujo ? croquis : null;
+}
+
 function construirPdf(id) {
   const c = cotizaciones.obtener(id);
   // Croquis y planos adjuntos: salen como anexos al final (los que ya no están en el disco se omiten)
@@ -330,6 +340,23 @@ function construirPdf(id) {
     const opciones = { fuente: p.negrita ? 'negrita' : 'cuerpo', tamano: 8.8, color: p.negrita ? COLOR.texto : COLOR.suave, width: anchoTexto };
     escribir(doc, p.texto, MARGEN_X, y, opciones);
     y += alturaDe(doc, p.texto, anchoTexto, opciones) + 6;
+  }
+
+  // Croquis dibujado en la app, si el presupuesto tiene uno y se eligió que salga
+  const croquis = croquisParaElPdf(id);
+  if (croquis) {
+    const plan = croquisPdf.preparar(doc, croquis, new Map(croquis.materiales.filter((m) => m.catalogo_item_id !== null).map((m) => [m.catalogo_item_id, m.codigo])), ANCHO);
+    y += 14;
+    const ALTO_TITULO = 20;
+    let escala = croquisPdf.escalaParaEspacio(plan, LIMITE_INFERIOR - y - ALTO_TITULO);
+    if (escala === null) {
+      y = paginaNueva();
+      escala = plan.escalaIdeal;
+    }
+    escribir(doc, 'CROQUIS DEL STAND', MARGEN_X, y, { fuente: 'negrita', tamano: 8.5, color: COLOR.primarioOscuro, lineBreak: false, characterSpacing: 0.8 });
+    doc.save().lineWidth(0.5).strokeColor(COLOR.borde).moveTo(MARGEN_X, y + 13).lineTo(MARGEN_X + ANCHO, y + 13).stroke().restore();
+    y += ALTO_TITULO;
+    y += croquisPdf.dibujar(doc, plan, { x: MARGEN_X, y, espacio: LIMITE_INFERIOR - y, escala });
   }
 
   // Pie de página con numeración

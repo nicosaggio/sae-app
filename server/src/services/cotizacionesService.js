@@ -11,6 +11,7 @@ const productosService = require('./productosService');
 const lotesService = require('./lotesService');
 const adjuntosService = require('./cotizacionAdjuntosService');
 const clientesService = require('./clientesService');
+const croquisService = require('./croquisService');
 const { versionGeneral, errorHttp } = require('./catalogoCalculoService');
 
 const TIPOS = ['SAE', 'SAE DE ORG', 'SAE EN PREDIO', 'STAND ARTESANAL', 'STAND SISTEMA', 'ORGANIZACIÓN'];
@@ -187,6 +188,7 @@ function obtener(id) {
     fecha_vencimiento: sumarDias(fila.fecha_carga, DIAS_DE_VALIDEZ),
     lineas,
     adjuntos: adjuntosService.listar(id),
+    croquis: croquisService.resumenDeCotizacion(id),
     totales: calcularTotales(lineas, fila.iva_porcentaje, fila.descuento_porcentaje),
     presupuesto: presupuesto ? { ...presupuesto } : null,
     confirmable: { ok: motivos.length === 0, motivos },
@@ -359,6 +361,7 @@ function duplicar(id, usuario) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     adjuntosService.copiar(id, idNueva, usuario);
+    croquisService.copiarDeCotizacion(id, idNueva, usuario);
     for (const l of origen.lineas) insertar.run(idNueva, l.catalogo_item_id, l.codigo, l.descripcion, l.rubro, l.cantidad, l.precio_catalogo, l.precio_unitario, l.comentario);
     return obtener(idNueva);
   });
@@ -548,8 +551,38 @@ function confirmar(id, usuario) {
     db.prepare(
       `UPDATE cotizaciones SET estado = 'confirmada', presupuesto_id = ?, confirmada_por = ?, confirmada_en = datetime('now'), actualizado_en = datetime('now') WHERE id = ?`
     ).run(presupuestoId, usuario.id, id);
-    return obtener(id);
+
+    // El croquis dibujado en el presupuesto pasa al lote, para que salga en el PDF de totales del evento.
+    const croquisEnLote = croquisService.copiarALote(id, lote.id, usuario);
+    return { ...obtener(id), croquis_en_lote: croquisEnLote };
   });
+}
+
+// --------------------------------------------------------------------------------------------
+// Croquis dibujado en el presupuesto
+// --------------------------------------------------------------------------------------------
+
+function obtenerCroquis(id) {
+  leerFila(id);
+  return croquisService.obtenerDeCotizacion(id);
+}
+
+/** Se dibuja mientras el presupuesto está pendiente; al confirmarlo pasa al lote y ahí se sigue editando. */
+function guardarCroquis(id, datos, usuario) {
+  exigirPendiente(leerFila(id));
+  return croquisService.guardarDeCotizacion(id, datos, usuario);
+}
+
+function eliminarCroquis(id) {
+  exigirPendiente(leerFila(id));
+  croquisService.eliminarDeCotizacion(id);
+}
+
+/** Que el croquis salga o no en el PDF se puede cambiar siempre, como en los adjuntos. */
+function definirCroquisEnPdf(id, incluir) {
+  leerFila(id);
+  croquisService.definirIncluirEnPdf(id, incluir);
+  return obtener(id);
 }
 
 function opciones() {
@@ -587,5 +620,9 @@ module.exports = {
   aplicarLista,
   aplicarDescuento,
   confirmar,
+  obtenerCroquis,
+  guardarCroquis,
+  eliminarCroquis,
+  definirCroquisEnPdf,
   opciones,
 };

@@ -23,9 +23,6 @@ export function Layout() {
   const { datos: alertas } = usePolling(() => api.get('/presupuestos/alertas'), 30000, []);
   const totalAlertas = alertas ? alertas.length : 0;
 
-  const { datos: estadoImport } = usePolling(() => api.get('/importaciones/estado'), 30000, []);
-  const totalImportPendientes = estadoImport ? estadoImport.total : 0;
-
   const cerrarMenu = () => setMenuAbierto(false);
 
   return (
@@ -50,16 +47,6 @@ export function Layout() {
           <NavLink to="/alertas" className={({ isActive }) => (isActive ? 'active' : '')} onClick={cerrarMenu}>
             Alertas{totalAlertas > 0 && <span className="badge tipo" style={{ marginLeft: 6 }}>{totalAlertas}</span>}
           </NavLink>
-          {puedeEscribir && (
-            <NavLink to="/importaciones" className={({ isActive }) => (isActive ? 'active' : '')} onClick={cerrarMenu}>
-              Importaciones
-              {totalImportPendientes > 0 && (
-                <span className="badge tipo" style={{ marginLeft: 6 }}>
-                  {totalImportPendientes}
-                </span>
-              )}
-            </NavLink>
-          )}
         </nav>
         <div className="usuario-box">
           <div>{usuario?.nombre_completo || usuario?.nombre_usuario}</div>

@@ -12,7 +12,6 @@ import { ClientesPage } from './pages/ClientesPage';
 import { TotalesPage } from './pages/TotalesPage';
 import { AlertasPage } from './pages/AlertasPage';
 import { ProductosPage } from './pages/ProductosPage';
-import { ImportacionesPage } from './pages/ImportacionesPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { CatalogoLayout } from './components/CatalogoLayout';
 import { CatalogoPage } from './pages/CatalogoPage';
@@ -38,15 +37,16 @@ function App() {
         <Route path="inicio" element={<HomePage />} />
         <Route path="calendario" element={<CalendarioPage />} />
         <Route path="eventos/:id" element={<EventoDetallePage />} />
-        <Route path="eventos/:eventoId/lotes/:loteId/croquis" element={<CroquisLotePage />} />
+        {/* Cada ruta con su propia instancia (key): son dos usos de la misma pantalla y no tienen que compartir estado. */}
+        <Route path="eventos/:eventoId/lotes/:loteId/croquis" element={<CroquisLotePage key="lote" />} />
         <Route path="presupuestos" element={<PresupuestosPage />} />
         <Route path="presupuestos/nuevo" element={<CotizacionEditorPage />} />
         <Route path="presupuestos/carga/:id" element={<CotizacionEditorPage />} />
+        <Route path="presupuestos/carga/:id/croquis" element={<CroquisLotePage key="presupuesto" />} />
         <Route path="clientes" element={<ClientesPage />} />
         <Route path="totales" element={<TotalesPage />} />
         <Route path="alertas" element={<AlertasPage />} />
         <Route path="productos" element={<ProductosPage />} />
-        <Route path="importaciones" element={<ImportacionesPage />} />
         <Route path="usuarios" element={<UsuariosPage />} />
         <Route path="catalogo" element={<CatalogoLayout />}>
           <Route index element={<CatalogoPage />} />
@@ -56,6 +56,8 @@ function App() {
           <Route path="importar" element={<CatalogoImportarPage />} />
           <Route path="ajustes" element={<CatalogoAjustesPage />} />
         </Route>
+        {/* Una dirección que ya no existe (por ejemplo un favorito viejo de /importaciones) lleva al inicio. */}
+        <Route path="*" element={<Navigate to="/inicio" replace />} />
       </Route>
     </Routes>
   );

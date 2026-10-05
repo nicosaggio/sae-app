@@ -189,6 +189,24 @@ test('los spots traen su "ancla": el punto del brazo que se apoya en la línea d
   assert.equal(r.cuerpo.COLUMNA.ancla, undefined, 'los demás símbolos no tienen ancla');
 });
 
+test('todos los paneles y las columnas se dibujan del mismo color; los demás bloques conservan el de AutoCAD', () => {
+  const simbolos = require('../src/data/croquisSimbolos.json');
+  const esPanelOColumna = (codigo) => /^(PB|PC|PN|PV|PA)-/.test(codigo) || codigo === 'COLUMNA';
+  const colores = new Set();
+  let cantidad = 0;
+  for (const [codigo, simbolo] of Object.entries(simbolos)) {
+    if (!esPanelOColumna(codigo)) continue;
+    cantidad++;
+    for (const p of simbolo.paths) colores.add(p.c);
+  }
+  assert.ok(cantidad >= 18, 'están los paneles blancos, cerezo, negros, el vidriado, la costilla y la columna');
+  assert.deepEqual([...colores], ['#0000ff'], 'un solo color para todos (panel y columna)');
+
+  const coloresDe = (codigo) => new Set(simbolos[codigo].paths.map((p) => p.c));
+  assert.ok(coloresDe('IS-03').has('#ff0000'), 'los spots siguen rojos');
+  assert.ok(coloresDe('IS-03').size === 1);
+});
+
 test('lote inexistente da 404', async () => {
   assert.equal((await llamar('oper1', 'GET', '/lotes/999999/croquis')).status, 404);
   assert.equal((await llamar('oper1', 'PUT', '/lotes/999999/croquis', { paredes: [], materiales: [] })).status, 404);

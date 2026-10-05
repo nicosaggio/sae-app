@@ -124,7 +124,60 @@ function tamanoLegible(bytes) {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-/** Croquis y planos (imagen o PDF) que salen como anexos al final del PDF del presupuesto. */
+/** El croquis del stand dibujado en la app: se dibuja desde acá y se elige si sale o no en el PDF del presupuesto. */
+function CroquisCard({ cot, puedeEscribir, onCot }) {
+  const [error, setError] = useState('');
+  const [trabajando, setTrabajando] = useState(false);
+  const resumen = cot.croquis;
+  const puedeDibujar = puedeEscribir && cot.estado === 'pendiente';
+
+  async function cambiarInclusion(incluir) {
+    setError('');
+    setTrabajando(true);
+    try {
+      onCot(await api.put(`/cotizaciones/${cot.id}/croquis/pdf`, { incluir_en_pdf: incluir }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTrabajando(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>Croquis del stand</h3>
+      <p className="texto-suave" style={{ marginTop: 0 }}>
+        Dibujá el plano del stand con los materiales del catálogo, las paredes y las cotas, y elegí si sale o no en el PDF del presupuesto. Al confirmar el presupuesto, el
+        croquis pasa al lote del stand y sale en los totales del evento.
+      </p>
+      {error && <div className="aviso error">{error}</div>}
+      <div className="toolbar" style={{ marginBottom: 0, alignItems: 'center' }}>
+        {resumen ? (
+          <span>
+            Croquis dibujado: {resumen.paredes} {resumen.paredes === 1 ? 'pared' : 'paredes'}, {resumen.materiales} {resumen.materiales === 1 ? 'material' : 'materiales'}, {resumen.cotas}{' '}
+            {resumen.cotas === 1 ? 'cota' : 'cotas'}
+            {resumen.con_comentarios ? ', con comentarios' : ''}.
+          </span>
+        ) : (
+          <span className="texto-suave">Todavía no hay un croquis dibujado.</span>
+        )}
+        {(puedeDibujar || resumen) && (
+          <Link className="boton" to={`/presupuestos/carga/${cot.id}/croquis`}>
+            {puedeDibujar ? (resumen ? 'Editar croquis' : 'Dibujar croquis') : 'Ver croquis'}
+          </Link>
+        )}
+      </div>
+      {resumen && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <input type="checkbox" checked={resumen.incluir_en_pdf} disabled={!puedeEscribir || trabajando} onChange={(e) => cambiarInclusion(e.target.checked)} />
+          Incluir el croquis en el PDF del presupuesto
+        </label>
+      )}
+    </div>
+  );
+}
+
+/** Planos y archivos (imagen o PDF) que salen como anexos al final del PDF del presupuesto. */
 function AdjuntosCard({ cot, puedeEscribir, onCot }) {
   const [titulo, setTitulo] = useState('');
   const [subiendo, setSubiendo] = useState(false);
@@ -158,7 +211,7 @@ function AdjuntosCard({ cot, puedeEscribir, onCot }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0 }}>Croquis y planos</h3>
+      <h3 style={{ marginTop: 0 }}>Planos y archivos adjuntos</h3>
       <p className="texto-suave" style={{ marginTop: 0 }}>
         Podés adjuntar imágenes (JPG o PNG) y archivos PDF. Salen como anexos al final del PDF del presupuesto, en el orden en que los cargues. Hasta 10 por presupuesto y 25 MB cada uno.
       </p>
@@ -204,7 +257,7 @@ function AdjuntosCard({ cot, puedeEscribir, onCot }) {
         <div className="toolbar" style={{ marginBottom: 0, alignItems: 'flex-end' }}>
           <div className="campo" style={{ minWidth: 240 }}>
             <label>Título del nuevo adjunto (opcional)</label>
-            <input value={titulo} placeholder="Ej.: Croquis del stand" onChange={(e) => setTitulo(e.target.value)} />
+            <input value={titulo} placeholder="Ej.: Plano de la sala" onChange={(e) => setTitulo(e.target.value)} />
           </div>
           <div className="campo">
             <label>{subiendo ? 'Subiendo…' : 'Archivo'}</label>
@@ -316,7 +369,7 @@ export function CotizacionEditorPage() {
     try {
       const respuesta = await accion();
       setCot(respuesta);
-      if (mensaje) setAviso(mensaje);
+      if (mensaje) setAviso(typeof mensaje === 'function' ? mensaje(respuesta) : mensaje);
       return true;
     } catch (err) {
       setError(err.message);
@@ -388,7 +441,16 @@ export function CotizacionEditorPage() {
   async function confirmarPresupuesto() {
     const destino = `${cot.evento_nombre}, lote ${cot.lote}`;
     if (!confirm(`Se confirma el presupuesto y pasa a ser parte del evento (${destino}). Después ya no se edita desde acá, sino dentro del evento.\n\n¿Confirmar?`)) return;
-    await operar(() => api.post(`/cotizaciones/${id}/confirmar`), 'Presupuesto confirmado: ya forma parte del evento.');
+    await operar(
+      () => api.post(`/cotizaciones/${id}/confirmar`),
+      (r) =>
+        'Presupuesto confirmado: ya forma parte del evento.' +
+        (r.croquis_en_lote === 'copiado'
+          ? ' El croquis quedó guardado en el lote del stand.'
+          : r.croquis_en_lote === 'lote_ya_tenia'
+            ? ' El lote ya tenía un croquis, así que se conservó ese.'
+            : '')
+    );
   }
 
   async function rechazarPresupuesto() {
@@ -738,6 +800,8 @@ export function CotizacionEditorPage() {
           </div>
         </div>
       )}
+
+      {cot && <CroquisCard cot={cot} puedeEscribir={puedeEscribir} onCot={setCot} />}
 
       {cot && <AdjuntosCard cot={cot} puedeEscribir={puedeEscribir} onCot={setCot} />}
 

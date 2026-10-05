@@ -4,6 +4,9 @@ const usuariosService = require('../services/usuariosService');
 
 const router = express.Router();
 
+// Con la app accesible desde Internet una clave de 4 caracteres es demasiado débil.
+const CLAVE_MINIMA = 8;
+
 router.use(requireAuth);
 router.use(requireAdmin);
 
@@ -16,8 +19,8 @@ router.post('/', (req, res) => {
   if (!nombre_usuario || !password) {
     return res.status(400).json({ error: 'Usuario y contraseña son obligatorios' });
   }
-  if (password.length < 4) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+  if (typeof password !== 'string' || password.length < CLAVE_MINIMA) {
+    return res.status(400).json({ error: `La contraseña debe tener al menos ${CLAVE_MINIMA} caracteres` });
   }
   res.status(201).json(usuariosService.crear({ nombre_usuario, password, nombre_completo, rol, solo_estado }));
 });
@@ -32,8 +35,8 @@ router.put('/:id', (req, res) => {
 
 router.post('/:id/password', (req, res) => {
   const { password } = req.body || {};
-  if (!password || password.length < 4) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+  if (typeof password !== 'string' || password.length < CLAVE_MINIMA) {
+    return res.status(400).json({ error: `La contraseña debe tener al menos ${CLAVE_MINIMA} caracteres` });
   }
   usuariosService.cambiarPassword(Number(req.params.id), password);
   res.json({ ok: true });
