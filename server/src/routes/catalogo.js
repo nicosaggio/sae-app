@@ -11,6 +11,7 @@ const catalogoPdfService = require('../services/catalogoPdfService');
 const { leerBaseParche } = require('../services/catalogoImportService');
 const { ejecutarBackup } = require('../services/backupService');
 const { rutaDeImagen, guardarImagen } = require('../services/catalogoImagenService');
+const croquisService = require('../services/croquisService');
 
 const router = express.Router();
 
@@ -59,6 +60,11 @@ function traducirErrorDeSubida(err) {
 }
 
 const id = (req) => Number(req.params.id);
+
+// Biblioteca de símbolos para dibujar croquis (código de catálogo -> geometría + color).
+router.get('/croquis-simbolos', (req, res) => {
+  res.json(croquisService.simbolosDisponibles());
+});
 
 // --- Ítems
 router.get('/items', (req, res) => {

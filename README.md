@@ -466,7 +466,86 @@ CUIT.
 
 ---
 
-## 10) Resumen operativo del día a día
+## 10) Croquis del stand
+
+Desde cada lote (stand) de un evento se puede dibujar su croquis: las paredes del stand y la
+ubicación de los materiales reales del catálogo (sistema, mobiliario, equipamiento y electricidad),
+usando los símbolos del plano de AutoCAD de la empresa. Es **opcional**: un lote sin croquis
+dibujado no agrega nada al PDF.
+
+### 10.1) Cómo se dibuja
+
+En el panel de cada lote hay un botón **"Dibujar croquis"** (o **"Ver croquis"** si ya tiene uno
+guardado), que abre un editor:
+- **Paredes**: se marcan clic a clic, con imán a la grilla cada 10 cm.
+- **Materiales**: se elige uno de la paleta (con buscador y agrupados por rubro) y se hace clic
+  sobre el plano para colocarlo; queda seleccionado para seguir colocando el mismo varias veces
+  (Escape para cancelar). Cada material ya colocado se puede arrastrar, rotar y borrar.
+  Al colocar o mover un material se **engancha** (imán) al centro de las columnas, a las
+  esquinas y a las puntas de pared que tenga cerca, y se ve una vista previa con un marcador
+  del punto: así un dintel queda centrado exacto sobre la columna de un panel. Si no hay nada
+  cerca, va a la grilla de 10 cm. Los **spots** se apoyan en la línea de un dintel: el extremo de
+  su brazo se engancha al punto más cercano de la línea y se desliza a lo largo de ella de a 10 cm
+  (si hay un extremo o el medio del dintel cerca, se engancha a ese punto). El brazo tiene que
+  quedar de ese lado: se gira con **R** y se vuelve a acercar.
+- **Cotas**: en el modo **Cotas** se acota con tres clicks, como en AutoCAD: primer punto,
+  segundo punto y dónde va la línea de cota. Los puntos se imantan al **centro de las columnas**
+  (los círculos de los paneles y demás símbolos), a las esquinas de los materiales y a las puntas
+  de pared (si no hay ninguno cerca, a la grilla), y la medida se
+  calcula sola, en metros. Para borrar una cota se hace click sobre su medida, o se usa
+  **Deshacer última cota**.
+- **Comentarios**: un cuadro de texto debajo del plano (hasta 1.000 caracteres) para las
+  aclaraciones del armado. Salen impresos a la derecha del croquis (ver 10.3).
+- Se guarda con el botón **Guardar**; también se puede borrar todo el croquis del lote.
+
+Se maneja como un CAD: **rueda del mouse** = zoom, **click central y arrastre** = paneo, **click y
+arrastre sobre el plano** = selección múltiple (de izquierda a derecha, sólo lo que queda adentro;
+de derecha a izquierda, lo que toca el rectángulo), **Shift+click** = sumar o quitar de la
+selección, **Ctrl+C / Ctrl+V** = copiar y pegar, **R** = rotar la selección entera como una sola
+pieza, **Supr** = borrar, **Ctrl+A** = seleccionar todo, **Esc** = cancelar.
+
+### 10.2) Símbolos disponibles
+
+Los símbolos salen del archivo DXF de AutoCAD de la empresa ("Sistema 27") y mantienen el color
+original de cada bloque. **No todos los ítems del catálogo tienen un símbolo**: donde no hay un
+bloque genuino para ese ítem exacto, no se dibuja nada en vez de reemplazarlo por uno parecido. La
+biblioteca de símbolos vive en `server/src/data/croquisSimbolos.json` y no se genera desde el
+servidor: si hace falta agregar o corregir un símbolo, hay que volver a exportar el bloque desde
+AutoCAD y rehacer la extracción a mano (ese proceso no forma parte del stack normal de la app, así
+que no vive en este repositorio).
+
+Hay además **bloques auxiliares**: se dibujan pero **no son ítems del catálogo** (no se venden ni
+tienen precio, no aparecen en presupuestos). Hoy hay uno, la **COLUMNA** (rubro SISTEMA, el
+mismo círculo de 10 cm que tienen los paneles), para poner en la unión de dos dinteles. Como
+las columnas de los paneles, se engancha (imán) a las puntas de los dinteles. Se agregan en
+`server/src/data/croquisSimbolos.json` con `"auxiliar": true`, `rubro` y `descripcion`.
+
+### 10.3) En el PDF de totales del evento
+
+Al exportar el PDF de **Totales** de un evento, el croquis sale **justo debajo del detalle de su
+lote** (no al final): paredes, materiales a escala con su rotación y su color original, y las
+cotas con su medida. Los lotes sin croquis dibujado no llevan nada.
+
+- Si el lote tiene **comentarios**, salen en un cuadro a la derecha del croquis; si no tiene, el
+  croquis usa todo el ancho.
+- Es **compacto**: el dibujo se encuadra exacto (sin aire de más) y no se agranda más de lo
+  necesario. Nunca se corta ni se parte entre dos hojas: si no entra en lo que queda de la hoja se
+  lo achica un poco y, si igual quedaría muy chico, pasa a la hoja siguiente repitiendo el título
+  del lote.
+- Un lote con croquis pero **sin pedidos cargados** igual se imprime, con su propio título.
+- Al exportar **filtrando por rubros**, sólo salen los croquis de los lotes que aparecen en el
+  listado.
+
+### 10.4) Al actualizar la aplicación
+
+Agrega la tabla `lote_croquis` (migración `0015_lote_croquis.sql`) y, a esa tabla, las columnas
+`comentarios` y `cotas` (migración `0016_lote_croquis_comentarios_cotas.sql`). Se crean solas al
+arrancar y **no modifican ninguna otra tabla**; los croquis que ya existían quedan sin comentarios
+ni cotas. Hace falta `npm install && npm run build` en el cliente y reiniciar el servidor.
+
+---
+
+## 11) Resumen operativo del día a día
 
 - La PC servidor tiene que quedar prendida (o al menos no en suspensión) para que el resto
   pueda usar la app.

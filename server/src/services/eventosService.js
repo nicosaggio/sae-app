@@ -43,8 +43,10 @@ function obtenerDetalle(id) {
      WHERE pl.presupuesto_id = ? ORDER BY prod.rubro, prod.nombre`
   );
 
+  const tieneCroquisStmt = db.prepare('SELECT 1 FROM lote_croquis WHERE lote_id = ?');
   const lotesConDatos = lotes.map((lote) => ({
     ...lote,
+    tiene_croquis: Boolean(tieneCroquisStmt.get(lote.id)),
     presupuestos: presupuestosStmt.all(lote.id).map((p) => ({ ...p, lineas: lineasStmt.all(p.id) })),
   }));
 

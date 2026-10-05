@@ -226,7 +226,7 @@ export function EventoDetallePage() {
           <p className="texto-suave">Todavía no hay lotes en este evento.</p>
         ) : (
           evento.lotes.map((lote) => (
-            <LotePanel key={lote.id} lote={lote} productos={productos} onCambiado={cargar} />
+            <LotePanel key={lote.id} lote={lote} eventoId={evento.id} productos={productos} onCambiado={cargar} />
           ))
         )}
       </div>

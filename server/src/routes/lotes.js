@@ -2,6 +2,7 @@ const express = require('express');
 const { requireAuth } = require('../middleware/requireAuth');
 const { bloquearSiSoloEstado } = require('../middleware/restringirEscritura');
 const lotesService = require('../services/lotesService');
+const croquisService = require('../services/croquisService');
 
 const router = express.Router();
 
@@ -26,6 +27,19 @@ router.put('/lotes/:id', bloquearSiSoloEstado, (req, res) => {
 
 router.delete('/lotes/:id', bloquearSiSoloEstado, (req, res) => {
   lotesService.eliminar(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+router.get('/lotes/:id/croquis', (req, res) => {
+  res.json(croquisService.obtener(Number(req.params.id)));
+});
+
+router.put('/lotes/:id/croquis', bloquearSiSoloEstado, (req, res) => {
+  res.json(croquisService.guardar(Number(req.params.id), req.body || {}, req.usuario));
+});
+
+router.delete('/lotes/:id/croquis', bloquearSiSoloEstado, (req, res) => {
+  croquisService.eliminar(Number(req.params.id));
   res.json({ ok: true });
 });
 

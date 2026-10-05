@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { PresupuestoPanel } from './PresupuestoPanel';
 import { useAuth } from '../context/AuthContext';
 
-export function LotePanel({ lote, productos, onCambiado }) {
+export function LotePanel({ lote, eventoId, productos, onCambiado }) {
   const { puedeEscribir } = useAuth();
   const [error, setError] = useState('');
   const [editando, setEditando] = useState(false);
@@ -72,14 +73,19 @@ export function LotePanel({ lote, productos, onCambiado }) {
             {lote.expositor && <span className="texto-suave"> — {lote.expositor}</span>}
             {lote.contacto && <span className="texto-suave"> ({lote.contacto})</span>}
           </strong>
-          {puedeEscribir && (
-            <div className="acciones-fila">
-              <button onClick={() => setEditando(true)}>Editar lote</button>
-              <button className="peligro" onClick={borrarLote}>
-                Borrar lote
-              </button>
-            </div>
-          )}
+          <div className="acciones-fila">
+            <Link className="boton" to={`/eventos/${eventoId}/lotes/${lote.id}/croquis`}>
+              {lote.tiene_croquis ? 'Ver croquis' : 'Dibujar croquis'}
+            </Link>
+            {puedeEscribir && (
+              <>
+                <button onClick={() => setEditando(true)}>Editar lote</button>
+                <button className="peligro" onClick={borrarLote}>
+                  Borrar lote
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
