@@ -46,7 +46,8 @@ function listar({ confirmado, estado, eventoId, lote, desde, hasta } = {}) {
     sql += ' AND e.fecha_inicio <= ?';
     params.push(hasta);
   }
-  sql += ' ORDER BY e.fecha_inicio ASC, p.id DESC';
+  // Del más reciente al más antiguo, por la fecha del presupuesto (la que se ve en la columna "Fecha").
+  sql += ' ORDER BY p.fecha DESC, p.id DESC';
   return db.prepare(sql).all(...params);
 }
 

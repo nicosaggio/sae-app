@@ -598,3 +598,24 @@ Lo que trae la app y cómo cuidarla.
   PC*. Copiá la carpeta `server/data/` completa (base, backups, fotos del catálogo y adjuntos de
   presupuestos, que no entran en el backup automático) a otro disco o a la nube cada tanto.
 - Cada tanto: `npm audit` y actualizar Node.
+
+### 12.3) Acceso desde fuera de la oficina (Tailscale)
+
+Para usar la app desde casa sin publicarla en internet se usa **Tailscale** (una VPN privada): la app
+sigue en la PC de la oficina, con su base, backups, fotos y adjuntos, y solo entran los dispositivos
+que se sumaron a la red de Tailscale.
+
+- **PC servidor** (nombre `equipamiento`): Tailscale instalado y con sesión iniciada. Se la ubica por
+  la IP `100.110.14.43` (fija mientras el dispositivo siga en la red) o por el nombre
+  `equipamiento.tail42334c.ts.net`.
+- **Desde otro dispositivo**: instalar Tailscale, iniciar sesión con la misma cuenta y abrir
+  `http://100.110.14.43:4001` (o `http://equipamiento:4001`). Anda igual que en la oficina: mismo
+  usuario y misma clave.
+- No hace falta tocar la app ni el router: el servidor ya escucha en todas las interfaces
+  (`0.0.0.0:4001`) y el tráfico por Tailscale va cifrado de punta a punta.
+- Condiciones: la PC servidor tiene que estar **prendida y con el servidor corriendo** (sin
+  suspensión). En el panel de Tailscale (login.tailscale.com → Machines) conviene **desactivar el
+  vencimiento de clave** de la PC servidor; si no, a los ~180 días hay que volver a iniciar sesión
+  en ella.
+- Para sumar a otra persona: invitarla desde el mismo panel (cada una con su cuenta de Tailscale);
+  los límites de usuarios del plan gratuito están en tailscale.com/pricing.
