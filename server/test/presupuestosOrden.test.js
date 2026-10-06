@@ -1,4 +1,5 @@
-// La lista de presupuestos confirmados sale del más reciente al más antiguo (por la fecha del presupuesto).
+// La lista de presupuestos confirmados: orden del más reciente al más antiguo (por la fecha del presupuesto)
+// y datos de la cotización original (código de facturación y responsable) cuando se cargó desde la app.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -47,4 +48,34 @@ test('los presupuestos salen del más reciente al más antiguo, aunque el evento
 
   const confirmados = presupuestosService.listar({ confirmado: true }).map((p) => p.id);
   assert.deepEqual(confirmados, [b, d, a, c]);
+});
+
+test('la lista trae el código de facturación y el responsable de los presupuestos cargados desde la app; los de Excel, vacío', () => {
+  const admin = Number(db.prepare('SELECT id FROM usuarios LIMIT 1').get().id);
+  const eventoId = Number(db.prepare("INSERT INTO eventos (nombre, fecha_inicio, fecha_fin, creado_por) VALUES ('EXPO COD', '2026-11-01', '2026-11-03', ?)").run(admin).lastInsertRowid);
+  const loteId = (codigo) => Number(db.prepare('INSERT INTO lotes (evento_id, codigo) VALUES (?, ?)').run(eventoId, codigo).lastInsertRowid);
+  const presupuesto = (lote, origen, fecha) =>
+    Number(
+      db
+        .prepare("INSERT INTO presupuestos (lote_id, numero, fecha, confirmado, estado, origen) VALUES (?, '2', ?, 1, 'pendiente_facturar', ?)")
+        .run(lote, fecha, origen).lastInsertRowid
+    );
+  const deApp = presupuesto(loteId('A1'), 'app', '2027-01-02');
+  const deExcel = presupuesto(loteId('A2'), 'excel', '2027-01-01');
+  const sinCodigo = presupuesto(loteId('A3'), 'app', '2027-01-03'); // su cotización todavía no tenía ID de cliente
+  const cotizacion = (presupuestoId, idCliente, numero) =>
+    db
+      .prepare("INSERT INTO cotizaciones (estado, fecha_carga, responsable, id_cliente, numero, presupuesto_id) VALUES ('confirmada', '2027-01-01', 'Ana Gómez', ?, ?, ?)")
+      .run(idCliente, numero, presupuestoId);
+  cotizacion(deApp, 'CEXYZ01', 2);
+  cotizacion(sinCodigo, null, null);
+
+  const lista = presupuestosService.listar({ eventoId });
+  const fila = (id) => lista.find((p) => p.id === id);
+  assert.equal(fila(deApp).cod_fac, 'CEXYZ01-2');
+  assert.equal(fila(deApp).responsable, 'Ana Gómez');
+  assert.equal(fila(deExcel).cod_fac, null);
+  assert.equal(fila(deExcel).responsable, null);
+  assert.equal(fila(sinCodigo).cod_fac, null, 'sin ID de cliente no hay código');
+  assert.equal(lista.length, 3, 'el unir con la cotización no repite ni pierde presupuestos');
 });

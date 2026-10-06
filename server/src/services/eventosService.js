@@ -214,6 +214,90 @@ function facturacionPorEvento(id) {
   }));
 }
 
+// Mismo criterio que facturacionPorEvento: sin IVA, y las líneas sin precio no suman (se cuentan aparte).
+const SUMA_FACTURACION = 'SUM(CASE WHEN pl.precio_unitario IS NOT NULL THEN pl.cantidad * pl.precio_unitario ELSE 0 END)';
+const SUMA_SIN_PRECIO = 'SUM(CASE WHEN pl.precio_unitario IS NULL THEN 1 ELSE 0 END)';
+const redondear = (n) => Math.round((n || 0) * 100) / 100;
+
+/** Años en los que hay eventos con presupuestos cargados, del más nuevo al más viejo. */
+function aniosConPresupuestos() {
+  return db
+    .prepare(
+      `SELECT DISTINCT CAST(substr(e.fecha_inicio, 1, 4) AS INTEGER) AS anio
+       FROM eventos e JOIN lotes l ON l.evento_id = e.id JOIN presupuestos p ON p.lote_id = l.id
+       WHERE e.fecha_inicio GLOB '[0-9][0-9][0-9][0-9]-*'
+       ORDER BY anio DESC`
+    )
+    .all()
+    .map((r) => r.anio);
+}
+
+/**
+ * Facturación de todo un año (sin IVA), sumando los presupuestos de los eventos que empiezan ese año:
+ * el total, y el desglose por mes, por estado de cobro, por rubro y por evento. Cada evento suma igual
+ * que su total en facturacionPorEvento, así que la suma de los eventos es el total del año.
+ */
+function facturacionAnual(anio) {
+  const clave = String(anio);
+  const DESDE = `FROM presupuestos p
+    JOIN lotes l ON l.id = p.lote_id
+    JOIN eventos e ON e.id = l.evento_id
+    LEFT JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
+    WHERE substr(e.fecha_inicio, 1, 4) = ?`;
+
+  const general = db
+    .prepare(`SELECT ${SUMA_FACTURACION} AS total, ${SUMA_SIN_PRECIO} AS sin_precio, COUNT(DISTINCT p.id) AS presupuestos, COUNT(DISTINCT e.id) AS eventos ${DESDE}`)
+    .get(clave);
+
+  const porMesFilas = db
+    .prepare(`SELECT CAST(substr(e.fecha_inicio, 6, 2) AS INTEGER) AS mes, ${SUMA_FACTURACION} AS total, COUNT(DISTINCT e.id) AS eventos ${DESDE} GROUP BY mes`)
+    .all(clave);
+  const porMes = Array.from({ length: 12 }, (_, i) => {
+    const fila = porMesFilas.find((f) => f.mes === i + 1);
+    return { mes: i + 1, total: redondear(fila?.total), eventos: fila?.eventos || 0 };
+  });
+
+  const porEstado = db
+    .prepare(`SELECT p.estado AS estado, ${SUMA_FACTURACION} AS total, COUNT(DISTINCT p.id) AS presupuestos ${DESDE} GROUP BY p.estado ORDER BY total DESC, p.estado`)
+    .all(clave)
+    .map((f) => ({ estado: f.estado, total: redondear(f.total), presupuestos: f.presupuestos }));
+
+  const porRubro = db
+    .prepare(
+      `SELECT COALESCE(prod.rubro, 'Sin rubro') AS rubro, ${SUMA_FACTURACION} AS total, SUM(pl.cantidad) AS cantidad
+       FROM presupuestos p
+       JOIN lotes l ON l.id = p.lote_id
+       JOIN eventos e ON e.id = l.evento_id
+       JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
+       JOIN productos prod ON prod.id = pl.producto_id
+       WHERE substr(e.fecha_inicio, 1, 4) = ?
+       GROUP BY COALESCE(prod.rubro, 'Sin rubro') ORDER BY total DESC`
+    )
+    .all(clave)
+    .map((f) => ({ rubro: f.rubro, total: redondear(f.total), cantidad: f.cantidad }));
+
+  const porEvento = db
+    .prepare(
+      `SELECT e.id AS id, e.nombre AS nombre, e.fecha_inicio AS fecha_inicio, ${SUMA_FACTURACION} AS total,
+              ${SUMA_SIN_PRECIO} AS sin_precio, COUNT(DISTINCT p.id) AS presupuestos
+       ${DESDE} GROUP BY e.id ORDER BY e.fecha_inicio DESC, e.nombre`
+    )
+    .all(clave)
+    .map((f) => ({ id: f.id, nombre: f.nombre, fecha_inicio: f.fecha_inicio, total: redondear(f.total), lineasSinPrecio: f.sin_precio || 0, presupuestos: f.presupuestos }));
+
+  return {
+    anio: Number(anio),
+    total: redondear(general.total),
+    lineasSinPrecio: general.sin_precio || 0,
+    presupuestos: general.presupuestos,
+    eventos: general.eventos,
+    porMes,
+    porEstado,
+    porRubro,
+    porEvento,
+  };
+}
+
 module.exports = {
   listar,
   obtener,
@@ -225,4 +309,6 @@ module.exports = {
   totalesPorEvento,
   agruparPorRubro,
   facturacionPorEvento,
+  aniosConPresupuestos,
+  facturacionAnual,
 };

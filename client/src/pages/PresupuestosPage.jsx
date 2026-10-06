@@ -4,7 +4,6 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { usePolling } from '../hooks/usePolling';
 import { ESTADOS_PRESUPUESTO, etiquetaEstadoPresupuesto } from '../constants';
-import { formatearMonto } from '../format';
 import { fechaCorta, pesos } from '../catalogoFormat';
 import { BuscadorEvento } from '../components/BuscadorEvento';
 import { Modal } from '../components/Modal';
@@ -17,13 +16,30 @@ const CONFIRMACION = [
   { value: 'todos', label: 'Todos' },
 ];
 
+// Las tres tablas (no confirmados, rechazados y confirmados) tienen las mismas 8 columnas con los mismos
+// anchos, para que se lean alineadas una debajo de la otra (ver .tabla-presupuestos en index.css).
+// Las columnas cortas llevan un ancho fijo (el justo para su texto más largo); evento, lote y cliente
+// (null) se reparten lo que sobra.
+const ANCHOS_COLUMNAS = [160, null, null, null, 100, 130, 125, 190];
+
+function Columnas() {
+  return (
+    <colgroup>
+      {ANCHOS_COLUMNAS.map((ancho, i) => (
+        <col key={i} style={ancho ? { width: ancho } : undefined} />
+      ))}
+    </colgroup>
+  );
+}
+
 /** Tabla de cotizaciones (presupuestos cargados desde la app que no forman parte de un evento). */
 function TablaCotizaciones({ lista, cargando, mensajeVacio, badgeClase, badgeTexto, onAbrir }) {
   if (cargando) return <p className="texto-suave">Cargando…</p>;
   if (lista.length === 0) return <p className="texto-suave">{mensajeVacio}</p>;
   return (
     <div className="tabla-scroll">
-      <table>
+      <table className="tabla-presupuestos">
+        <Columnas />
         <thead>
           <tr>
             <th>Cód. de facturación</th>
@@ -267,42 +283,32 @@ export function PresupuestosPage() {
               <p className="texto-suave">No hay presupuestos confirmados con estos filtros.</p>
             ) : (
               <div className="tabla-scroll">
-              <table>
+              <table className="tabla-presupuestos">
+                <Columnas />
                 <thead>
                   <tr>
+                    <th>Cód. de facturación</th>
                     <th>Evento</th>
                     <th>Lote</th>
                     <th>Cliente</th>
                     <th>Fecha</th>
-                    <th>Monto</th>
+                    <th>Total con IVA</th>
+                    <th>Responsable</th>
                     <th>Estado</th>
-                    <th>Origen</th>
                   </tr>
                 </thead>
                 <tbody>
                   {presupuestos.map((p) => (
                     <tr key={p.id} onClick={() => abrirPresupuesto(p.id)} style={{ cursor: 'pointer' }}>
+                      <td>{p.cod_fac || <span className="texto-suave">—</span>}</td>
                       <td>{p.evento_nombre}</td>
                       <td>{p.lote_codigo}{p.lote_expositor ? ` — ${p.lote_expositor}` : ''}</td>
                       <td>{p.cliente_nombre || '—'}</td>
-                      <td>{p.fecha || '—'}</td>
-                      <td>{formatearMonto(p.monto_total)}</td>
+                      <td>{fechaCorta(p.fecha)}</td>
+                      <td>{pesos(p.monto_total)}</td>
+                      <td>{p.responsable || '—'}</td>
                       <td>
                         <span className={`badge ${p.estado}`}>{etiquetaEstadoPresupuesto(p.estado)}</span>
-                      </td>
-                      <td>
-                        {p.origen === 'excel' ? (
-                          <span className="badge tipo">Excel</span>
-                        ) : p.origen === 'app' ? (
-                          <span className="badge tipo">App</span>
-                        ) : (
-                          <span className="texto-suave">Manual</span>
-                        )}
-                        {p.origen === 'excel' && !p.archivo_activo && (
-                          <span className="badge" style={{ marginLeft: 4, background: 'var(--color-peligro-fondo)', color: 'var(--color-peligro)' }}>
-                            sin archivo
-                          </span>
-                        )}
                       </td>
                     </tr>
                   ))}

@@ -639,6 +639,22 @@ a.boton.primario:hover {
   overflow-x: auto;
 }
 
+/* Presupuestos: las tres tablas comparten columnas y anchos (ver PresupuestosPage). Lo corto (código,
+   fecha, montos, responsable y estado) no se parte en dos renglones; evento, lote y cliente sí. */
+.tabla-presupuestos {
+  table-layout: fixed;
+  min-width: 1150px;
+}
+
+.tabla-presupuestos td {
+  overflow-wrap: anywhere;
+}
+
+.tabla-presupuestos td:nth-child(1),
+.tabla-presupuestos td:nth-child(n + 5) {
+  white-space: nowrap;
+}
+
 td.num, th.num {
   text-align: right;
   font-variant-numeric: tabular-nums;

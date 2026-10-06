@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { BuscadorEvento } from '../components/BuscadorEvento';
+import { FacturacionAnual } from '../components/FacturacionAnual';
 import { formatearMonto } from '../format';
 
 export function TotalesPage() {
+  const [modo, setModo] = useState('evento'); // 'evento' | 'anio'
   const [eventos, setEventos] = useState([]);
   const [eventoId, setEventoId] = useState(null);
   const [vista, setVista] = useState('cantidades');
@@ -55,10 +57,29 @@ export function TotalesPage() {
     ? `/api/eventos/${eventoId}/export/pdf` + (hayFiltro ? `?rubros=${encodeURIComponent(rubrosIncluidos.join(','))}` : '')
     : null;
 
+  function verEvento(id) {
+    setEventoId(id);
+    setVista('facturacion');
+    setModo('evento');
+  }
+
   return (
     <div>
-      <h2>Totales por evento</h2>
+      <h2>Totales</h2>
 
+      <div className="toolbar">
+        <button type="button" className={modo === 'evento' ? 'primario' : ''} onClick={() => setModo('evento')}>
+          Por evento
+        </button>
+        <button type="button" className={modo === 'anio' ? 'primario' : ''} onClick={() => setModo('anio')}>
+          Facturación de todo el año
+        </button>
+      </div>
+
+      {modo === 'anio' ? (
+        <FacturacionAnual onVerEvento={verEvento} />
+      ) : (
+        <>
       <div className="card">
         <div className="toolbar" style={{ marginBottom: 0 }}>
           <BuscadorEvento eventos={eventos} value={eventoId} onChange={setEventoId} />
@@ -214,6 +235,8 @@ export function TotalesPage() {
             </>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

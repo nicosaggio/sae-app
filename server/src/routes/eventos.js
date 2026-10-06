@@ -19,6 +19,17 @@ router.get('/', (req, res) => {
   );
 });
 
+// Va antes de '/:id', que si no lo tomaría como un id.
+router.get('/facturacion-anual', (req, res) => {
+  const anios = eventosService.aniosConPresupuestos();
+  const pedido = req.query.anio;
+  if (pedido !== undefined && !/^\d{4}$/.test(String(pedido))) return res.status(400).json({ error: 'El año tiene que ser de 4 cifras (ej. 2026)' });
+  // Sin año: el actual si tiene presupuestos, y si no el más reciente que tenga.
+  const actual = new Date().getFullYear();
+  const anio = pedido !== undefined ? Number(pedido) : anios.includes(actual) ? actual : anios[0] || actual;
+  res.json({ ...eventosService.facturacionAnual(anio), anios });
+});
+
 router.get('/:id', (req, res) => {
   const evento = eventosService.obtenerDetalle(Number(req.params.id));
   if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
