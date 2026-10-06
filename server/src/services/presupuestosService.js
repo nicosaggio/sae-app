@@ -2,6 +2,11 @@ const { db, transaction } = require('../db/connection');
 
 const ESTADOS = ['pendiente_facturar', 'facturado', 'pendiente_pago', 'cobrado', 'cancelado'];
 
+// Un presupuesto cancelado queda como registro (se ve en las listas y en el evento) pero no cuenta: no
+// entra en los totales, en la facturación ni en el PDF del evento. Todo cálculo que sume presupuestos
+// (alias `p`) tiene que agregar esta condición.
+const SQL_PRESUPUESTO_ACTIVO = "p.estado <> 'cancelado'";
+
 const SELECT_PRESUPUESTO_CONTEXTO = `
   SELECT p.*, l.codigo AS lote_codigo, l.expositor AS lote_expositor,
          e.id AS evento_id, e.nombre AS evento_nombre, e.fecha_inicio, e.fecha_fin
@@ -226,6 +231,7 @@ function alertasPago() {
 
 module.exports = {
   ESTADOS,
+  SQL_PRESUPUESTO_ACTIVO,
   listarPorLote,
   listar,
   obtener,

@@ -1,4 +1,5 @@
 const { db, transaction } = require('../db/connection');
+const { SQL_PRESUPUESTO_ACTIVO } = require('./presupuestosService');
 
 const SELECT_EVENTO = `
   SELECT e.*, u.nombre_completo AS creado_por_nombre, u.nombre_usuario AS creado_por_usuario
@@ -151,7 +152,7 @@ function agruparPorRubro(filas) {
   }));
 }
 
-/** Suma cantidad por producto (código) a través de TODOS los presupuestos de TODOS los lotes del evento. */
+/** Suma cantidad por producto (código) a través de todos los presupuestos (no cancelados) de TODOS los lotes del evento. */
 function totalesPorEvento(id) {
   const filas = db
     .prepare(
@@ -160,7 +161,7 @@ function totalesPorEvento(id) {
        JOIN presupuestos p ON p.id = pl.presupuesto_id
        JOIN lotes l ON l.id = p.lote_id
        JOIN productos prod ON prod.id = pl.producto_id
-       WHERE l.evento_id = ?
+       WHERE l.evento_id = ? AND ${SQL_PRESUPUESTO_ACTIVO}
        GROUP BY prod.id
        ORDER BY prod.rubro, prod.nombre`
     )
@@ -187,7 +188,7 @@ function facturacionPorEvento(id) {
        JOIN presupuestos p ON p.id = pl.presupuesto_id
        JOIN lotes l ON l.id = p.lote_id
        JOIN productos prod ON prod.id = pl.producto_id
-       WHERE l.evento_id = ?
+       WHERE l.evento_id = ? AND ${SQL_PRESUPUESTO_ACTIVO}
        GROUP BY prod.id
        ORDER BY prod.rubro, prod.nombre`
     )
@@ -225,7 +226,7 @@ function aniosConPresupuestos() {
     .prepare(
       `SELECT DISTINCT CAST(substr(e.fecha_inicio, 1, 4) AS INTEGER) AS anio
        FROM eventos e JOIN lotes l ON l.evento_id = e.id JOIN presupuestos p ON p.lote_id = l.id
-       WHERE e.fecha_inicio GLOB '[0-9][0-9][0-9][0-9]-*'
+       WHERE e.fecha_inicio GLOB '[0-9][0-9][0-9][0-9]-*' AND ${SQL_PRESUPUESTO_ACTIVO}
        ORDER BY anio DESC`
     )
     .all()
@@ -243,7 +244,7 @@ function facturacionAnual(anio) {
     JOIN lotes l ON l.id = p.lote_id
     JOIN eventos e ON e.id = l.evento_id
     LEFT JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
-    WHERE substr(e.fecha_inicio, 1, 4) = ?`;
+    WHERE substr(e.fecha_inicio, 1, 4) = ? AND ${SQL_PRESUPUESTO_ACTIVO}`;
 
   const general = db
     .prepare(`SELECT ${SUMA_FACTURACION} AS total, ${SUMA_SIN_PRECIO} AS sin_precio, COUNT(DISTINCT p.id) AS presupuestos, COUNT(DISTINCT e.id) AS eventos ${DESDE}`)
@@ -270,7 +271,7 @@ function facturacionAnual(anio) {
        JOIN eventos e ON e.id = l.evento_id
        JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
        JOIN productos prod ON prod.id = pl.producto_id
-       WHERE substr(e.fecha_inicio, 1, 4) = ?
+       WHERE substr(e.fecha_inicio, 1, 4) = ? AND ${SQL_PRESUPUESTO_ACTIVO}
        GROUP BY COALESCE(prod.rubro, 'Sin rubro') ORDER BY total DESC`
     )
     .all(clave)

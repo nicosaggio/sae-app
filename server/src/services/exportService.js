@@ -1,11 +1,12 @@
 const PDFDocument = require('pdfkit');
 const eventosService = require('./eventosService');
 const croquisPdf = require('./croquisPdf');
+const { SQL_PRESUPUESTO_ACTIVO } = require('./presupuestosService');
 
 /**
  * Trae, por cada lote del evento, sus productos agregados (sumando cantidad a través de
- * TODOS los presupuestos del lote, ya que para el despacho no importa de qué presupuesto
- * vino cada línea) y subdivididos por rubro.
+ * todos los presupuestos del lote que no estén cancelados, ya que para el despacho no importa
+ * de qué presupuesto vino cada línea) y subdivididos por rubro.
  */
 function obtenerLotesParaExport(db, eventoId, rubrosFiltro) {
   let sql = `SELECT l.id AS lote_id, l.codigo AS lote_codigo, l.expositor AS lote_expositor,
@@ -15,7 +16,7 @@ function obtenerLotesParaExport(db, eventoId, rubrosFiltro) {
        JOIN presupuestos p ON p.lote_id = l.id
        JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
        JOIN productos prod ON prod.id = pl.producto_id
-       WHERE l.evento_id = ?`;
+       WHERE l.evento_id = ? AND ${SQL_PRESUPUESTO_ACTIVO}`;
   const params = [eventoId];
   if (rubrosFiltro && rubrosFiltro.length > 0) {
     sql += ` AND COALESCE(prod.rubro, 'Sin rubro') IN (${rubrosFiltro.map(() => '?').join(',')})`;
@@ -205,13 +206,19 @@ function dibujarTotalesEvento(doc, totales) {
   }
 }
 
-/** Lotes del evento que tienen un croquis dibujado (ver croquisService.js), con sus paredes/materiales ya parseados. */
+/**
+ * Lotes del evento que tienen un croquis dibujado (ver croquisService.js), con sus paredes/materiales ya
+ * parseados. Un lote cuyos presupuestos están todos cancelados (el stand se cayó) no se imprime; uno sin
+ * ningún presupuesto cargado todavía sí, porque puede estar en preparación.
+ */
 function lotesConCroquis(db, eventoId) {
   const filas = db
     .prepare(
       `SELECT lc.paredes, lc.materiales, lc.cotas, lc.comentarios, l.id AS lote_id, l.codigo AS lote_codigo, l.expositor AS lote_expositor
        FROM lote_croquis lc JOIN lotes l ON l.id = lc.lote_id
        WHERE l.evento_id = ?
+         AND (NOT EXISTS (SELECT 1 FROM presupuestos p WHERE p.lote_id = l.id)
+              OR EXISTS (SELECT 1 FROM presupuestos p WHERE p.lote_id = l.id AND ${SQL_PRESUPUESTO_ACTIVO}))
        ORDER BY CAST(l.codigo AS INTEGER), l.codigo`
     )
     .all(eventoId);

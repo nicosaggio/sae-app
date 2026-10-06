@@ -353,6 +353,13 @@ Cada presupuesto tiene tres estados:
 La ventana **Presupuestos** tiene el filtro **Confirmación: Confirmados / No confirmados /
 Rechazados / Todos**. Por defecto muestra "Confirmados", igual que antes.
 
+Un presupuesto confirmado además tiene su **estado de cobro** (Pendiente de facturar, Facturado,
+Pendiente de pago, Cobrado o **Cancelado**). Un presupuesto **cancelado** queda como registro (se ve
+en las listas y en el evento y se puede reabrir cambiándole el estado) pero **no cuenta**: no sale en
+el PDF del evento (ni en el detalle del lote ni en los totales), ni suma en las cantidades de
+Totales ni en la facturación por evento y de todo el año. Si todos los presupuestos de un stand están
+cancelados, tampoco se imprime su croquis.
+
 ### 9.1) Cómo se arma un presupuesto
 
 1. **Datos**: los de la hoja CARGA del Excel (expo, tipo, lote, nombre del stand, razón social,
