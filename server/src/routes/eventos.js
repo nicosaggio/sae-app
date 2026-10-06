@@ -2,6 +2,7 @@ const express = require('express');
 const { requireAuth } = require('../middleware/requireAuth');
 const { bloquearSiSoloEstado } = require('../middleware/restringirEscritura');
 const eventosService = require('../services/eventosService');
+const informeAnualPdfService = require('../services/informeAnualPdfService');
 
 const router = express.Router();
 
@@ -19,15 +20,35 @@ router.get('/', (req, res) => {
   );
 });
 
-// Va antes de '/:id', que si no lo tomaría como un id.
+/** El año pedido en ?anio=; sin año, el actual si tiene presupuestos y si no el más reciente que tenga. Null si no es válido. */
+function anioPedido(req, anios) {
+  const pedido = req.query.anio;
+  if (pedido === undefined) {
+    const actual = new Date().getFullYear();
+    return anios.includes(actual) ? actual : anios[0] || actual;
+  }
+  return /^\d{4}$/.test(String(pedido)) ? Number(pedido) : null;
+}
+
+const ERROR_ANIO = { error: 'El año tiene que ser de 4 cifras (ej. 2026)' };
+
+// Estas dos van antes de '/:id', que si no las tomaría como un id.
 router.get('/facturacion-anual', (req, res) => {
   const anios = eventosService.aniosConPresupuestos();
-  const pedido = req.query.anio;
-  if (pedido !== undefined && !/^\d{4}$/.test(String(pedido))) return res.status(400).json({ error: 'El año tiene que ser de 4 cifras (ej. 2026)' });
-  // Sin año: el actual si tiene presupuestos, y si no el más reciente que tenga.
-  const actual = new Date().getFullYear();
-  const anio = pedido !== undefined ? Number(pedido) : anios.includes(actual) ? actual : anios[0] || actual;
+  const anio = anioPedido(req, anios);
+  if (anio === null) return res.status(400).json(ERROR_ANIO);
   res.json({ ...eventosService.facturacionAnual(anio), anios });
+});
+
+// El informe del año para imprimir: se abre en el visor de PDF del navegador.
+router.get('/facturacion-anual/pdf', async (req, res, next) => {
+  try {
+    const anio = anioPedido(req, eventosService.aniosConPresupuestos());
+    if (anio === null) return res.status(400).json(ERROR_ANIO);
+    await informeAnualPdfService.streamPdf(res, anio);
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/:id', (req, res) => {

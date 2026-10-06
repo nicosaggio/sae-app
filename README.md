@@ -479,6 +479,21 @@ un presupuesto. Se ven y se corrigen en el menú **Clientes**.
 Los presupuestos que se importaron antes desde Excel no tienen clientes guardados: ese import no leía
 el CUIT.
 
+### 9.7) Totales y facturación de todo el año
+
+En **Totales**, **Por evento** muestra las cantidades y la facturación (sin IVA) de un evento.
+**Facturación de todo el año** suma, para un año a elección, todos los eventos que empiezan ese año:
+el total, y cómo se reparte por mes, por rubro y por evento (tocando un evento se ve su detalle por
+producto). Usa el mismo cálculo que la facturación por evento, así que los números cierran.
+
+- **Imprimir informe (PDF)** abre el informe del año en una pestaña nueva para verlo e imprimirlo
+  (A4, mismo estilo que el PDF del presupuesto). Lleva el total, por mes, por rubro y por evento.
+- **No** muestra la facturación por estado de cobro (cobrado, pendiente de pago…): los estados de
+  los presupuestos viejos no están al día, así que ese desglose no sería correcto. El servidor
+  igual lo calcula (`porEstado` en `/api/eventos/facturacion-anual`) por si se vuelve a mostrar
+  cuando los estados estén completos.
+- Los presupuestos **cancelados** no cuentan (ver sección 9).
+
 ---
 
 ## 10) Croquis del stand

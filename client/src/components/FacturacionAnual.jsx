@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
-import { etiquetaEstadoPresupuesto } from '../constants';
 import { formatearMonto } from '../format';
 import { fechaCorta } from '../catalogoFormat';
 
@@ -21,7 +20,9 @@ function Barra({ parte, maximo }) {
 }
 
 /**
- * Facturación (sin IVA) de todo un año: el total y cómo se reparte por mes, estado de cobro, rubro y evento.
+ * Facturación (sin IVA) de todo un año: el total y cómo se reparte por mes, rubro y evento, con el botón para
+ * imprimir el informe. No se muestra el desglose por estado de cobro: los estados de los presupuestos viejos
+ * no están al día y esa información no sería correcta.
  * `onVerEvento(id)` abre la facturación de ese evento en la vista "Por evento".
  */
 export function FacturacionAnual({ onVerEvento }) {
@@ -62,6 +63,13 @@ export function FacturacionAnual({ onVerEvento }) {
             </select>
           </div>
           <span className="texto-suave">Eventos que empiezan en {datos.anio}, con todos sus presupuestos.</span>
+          {!sinDatos && (
+            <a href={`/api/eventos/facturacion-anual/pdf?anio=${datos.anio}`} target="_blank" rel="noreferrer">
+              <button type="button" className="primario">
+                Imprimir informe (PDF)
+              </button>
+            </a>
+          )}
         </div>
       </div>
 
@@ -128,59 +136,29 @@ export function FacturacionAnual({ onVerEvento }) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
-            <div className="card">
-              <h3 style={{ marginTop: 0 }}>Por estado de cobro</h3>
-              <div className="tabla-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Estado</th>
-                      <th className="num">Presupuestos</th>
-                      <th className="num">Facturación</th>
-                      <th className="num">%</th>
+          <div className="card">
+            <h3 style={{ marginTop: 0 }}>Por rubro</h3>
+            <div className="tabla-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Rubro</th>
+                    <th className="num">Unidades</th>
+                    <th className="num">Facturación</th>
+                    <th className="num">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datos.porRubro.map((g) => (
+                    <tr key={g.rubro}>
+                      <td>{g.rubro}</td>
+                      <td className="num">{formatoUnidades.format(g.cantidad)}</td>
+                      <td className="num">{formatearMonto(g.total)}</td>
+                      <td className="num">{porcentaje(g.total, datos.total)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {datos.porEstado.map((e) => (
-                      <tr key={e.estado}>
-                        <td>
-                          <span className={`badge ${e.estado}`}>{etiquetaEstadoPresupuesto(e.estado)}</span>
-                        </td>
-                        <td className="num">{e.presupuestos}</td>
-                        <td className="num">{formatearMonto(e.total)}</td>
-                        <td className="num">{porcentaje(e.total, datos.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginTop: 0 }}>Por rubro</h3>
-              <div className="tabla-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Rubro</th>
-                      <th className="num">Unidades</th>
-                      <th className="num">Facturación</th>
-                      <th className="num">%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {datos.porRubro.map((g) => (
-                      <tr key={g.rubro}>
-                        <td>{g.rubro}</td>
-                        <td className="num">{formatoUnidades.format(g.cantidad)}</td>
-                        <td className="num">{formatearMonto(g.total)}</td>
-                        <td className="num">{porcentaje(g.total, datos.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 

@@ -112,12 +112,54 @@ test('los años disponibles son los que tienen presupuestos, del más nuevo al m
   assert.deepEqual(eventosService.aniosConPresupuestos(), [2026, 2025]);
 });
 
+async function pdfDelInforme(anio) {
+  const res = await api(`/eventos/facturacion-anual/pdf?anio=${anio}`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'application/pdf');
+  assert.match(res.headers.get('content-disposition'), /^inline;/, 'se abre en el navegador para imprimirlo');
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const documento = await pdfjs.getDocument({ data: new Uint8Array(await res.arrayBuffer()), useSystemFonts: true }).promise;
+  const paginas = [];
+  for (let i = 1; i <= documento.numPages; i++) {
+    const contenido = await (await documento.getPage(i)).getTextContent();
+    paginas.push(contenido.items.map((t) => t.str).join(' ').replace(/\s+/g, ' '));
+  }
+  return paginas;
+}
+
+test('el informe en PDF trae el total, por mes, por rubro y por evento, y no el desglose por estado de cobro', async () => {
+  const paginas = await pdfDelInforme(2026);
+  const texto = paginas.join(' ');
+  assert.match(texto, /FACTURACIÓN 2026/);
+  assert.match(texto, /\$ 5\.500/, 'el total del año');
+  assert.match(texto, /3 eventos/);
+  assert.match(texto, /4 presupuestos/);
+  assert.match(texto, /1 línea\(s\) sin precio/, 'avisa que el total es parcial');
+  for (const mes of ['Marzo', 'Julio']) assert.match(texto, new RegExp(mes));
+  assert.match(texto, /Total 2026/);
+  assert.match(texto, /SISTEMA/);
+  assert.match(texto, /MOBILIARIO/);
+  for (const evento of ['EXPO A', 'EXPO B', 'EXPO C']) assert.match(texto, new RegExp(evento));
+  assert.doesNotMatch(texto, /EXPO D|EXPO E/, 'sólo los eventos del año con presupuestos');
+  // Los estados de los presupuestos viejos no están al día: ese desglose no se imprime.
+  assert.doesNotMatch(texto, /estado de cobro|Cobrado|Pendiente de (pago|facturar)|Facturado/i);
+  const paginaDeEventos = paginas.find((p) => /POR EVENTO/.test(p));
+  for (const evento of ['EXPO A', 'EXPO B', 'EXPO C']) assert.match(paginaDeEventos, new RegExp(evento), 'una tabla corta no se parte entre dos hojas');
+  assert.match(paginas.at(-1), new RegExp(`Página ${paginas.length} de ${paginas.length}`));
+});
+
+test('el informe de un año sin presupuestos lo dice', async () => {
+  assert.match((await pdfDelInforme(2024)).join(' '), /No hay presupuestos cargados en eventos de 2024/);
+});
+
 test('la ruta exige sesión, valida el año y no se confunde con /:id', async () => {
   const sinSesion = await fetch(`${base}/api/eventos/facturacion-anual?anio=2026`);
   assert.equal(sinSesion.status, 401);
 
   const mala = await api('/eventos/facturacion-anual?anio=abc');
   assert.equal(mala.status, 400);
+  assert.equal((await api('/eventos/facturacion-anual/pdf?anio=abc')).status, 400);
+  assert.equal((await fetch(`${base}/api/eventos/facturacion-anual/pdf?anio=2026`)).status, 401);
 
   const r = await api('/eventos/facturacion-anual?anio=2026');
   assert.equal(r.status, 200);
@@ -127,4 +169,23 @@ test('la ruta exige sesión, valida el año y no se confunde con /:id', async ()
 
   const sinAnio = await (await api('/eventos/facturacion-anual')).json();
   assert.ok(datos.anios.includes(sinAnio.anio), 'sin año pide uno que tenga presupuestos');
+});
+
+// Va al final: agrega eventos de 2027 que cambian los años disponibles de los tests de arriba.
+test('un año con muchos eventos sigue en más hojas, repite el título de la tabla y numera las páginas', async () => {
+  const admin = db.prepare('SELECT id FROM usuarios LIMIT 1').get().id;
+  const producto = db.prepare("SELECT id FROM productos WHERE codigo = 'PB-1'").get().id;
+  for (let i = 1; i <= 90; i++) {
+    const evento = Number(db.prepare('INSERT INTO eventos (nombre, fecha_inicio, fecha_fin, creado_por) VALUES (?, ?, ?, ?)').run(`EXPO MASIVA ${String(i).padStart(2, '0')}`, '2027-04-10', '2027-04-12', admin).lastInsertRowid);
+    const lote = Number(db.prepare('INSERT INTO lotes (evento_id, codigo) VALUES (?, ?)').run(evento, `M${i}`).lastInsertRowid);
+    const presupuesto = Number(db.prepare("INSERT INTO presupuestos (lote_id, numero, fecha, confirmado, estado, origen) VALUES (?, '1', '2027-01-01', 1, 'cobrado', 'manual')").run(lote).lastInsertRowid);
+    db.prepare('INSERT INTO presupuesto_lineas (presupuesto_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, 1, 100)').run(presupuesto, producto);
+  }
+  const paginas = await pdfDelInforme(2027);
+  assert.ok(paginas.length >= 3, `con 90 eventos son varias hojas (${paginas.length})`);
+  const texto = paginas.join(' ');
+  for (const n of [1, 45, 90]) assert.match(texto, new RegExp(`EXPO MASIVA ${String(n).padStart(2, '0')}`), `sale el evento ${n}`);
+  assert.match(texto, /POR EVENTO \(continuación\)/, 'al cortarse la tabla se repite su título');
+  assert.match(paginas.at(-1), new RegExp(`Página ${paginas.length} de ${paginas.length}`));
+  assert.match(paginas.at(-1), /\$ 9\.000/, 'el total (90 × $ 100) cierra la última hoja');
 });
