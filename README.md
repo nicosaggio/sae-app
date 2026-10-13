@@ -341,8 +341,10 @@ npm test --workspace=server
 Los presupuestos se arman directamente en la app con los precios del catálogo y se imprimen en PDF. Se hace desde **Presupuestos → "+ Nuevo presupuesto"**.
 
 Cada presupuesto tiene tres estados:
-- **Pendiente de confirmación**: se está armando o ya se le mandó al cliente. Es invisible para el
-  resto de la app: no aparece en el calendario, los totales, las alertas ni el export del evento.
+- **Pendiente de confirmación**: se está armando o ya se le mandó al cliente. El evento ya aparece
+  en el calendario (y en "Próximos eventos" del inicio) y su pantalla lista los presupuestos
+  pendientes (un clic abre el presupuesto), pero el presupuesto es invisible para el resto: no
+  entra en los totales, las alertas ni el export del evento.
 - **Confirmado**: cuando el cliente acepta, se confirma con un botón y pasa a formar parte del
   evento. Desde ahí es un presupuesto más y funciona con todo lo que ya existía.
 - **Rechazado**: cuando el cliente no lo acepta, se marca como rechazado con un botón en vez de

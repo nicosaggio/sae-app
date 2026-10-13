@@ -18,8 +18,12 @@ function listar({ desde, hasta, sinFecha, conPresupuestos } = {}) {
     sql += " AND e.fecha_inicio = ''";
   }
   if (conPresupuestos) {
-    sql += ` AND EXISTS (
-      SELECT 1 FROM lotes l JOIN presupuestos p ON p.lote_id = l.id WHERE l.evento_id = e.id
+    // Cuenta el presupuesto confirmado (ya es un lote/presupuesto) y también el que sigue pendiente de
+    // confirmación: el evento ya se está trabajando aunque el cliente todavía no haya aceptado. Los
+    // rechazados no cuentan.
+    sql += ` AND (
+      EXISTS (SELECT 1 FROM lotes l JOIN presupuestos p ON p.lote_id = l.id WHERE l.evento_id = e.id)
+      OR EXISTS (SELECT 1 FROM cotizaciones c WHERE c.evento_id = e.id AND c.estado = 'pendiente')
     )`;
   }
   sql += ' ORDER BY e.fecha_inicio DESC';

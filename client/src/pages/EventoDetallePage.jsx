@@ -5,6 +5,7 @@ import { BuscadorEvento } from '../components/BuscadorEvento';
 import { LotePanel } from '../components/LotePanel';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { fechaCorta, pesos } from '../catalogoFormat';
 
 export function EventoDetallePage() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export function EventoDetallePage() {
   const [evento, setEvento] = useState(null);
   const [productos, setProductos] = useState([]);
   const [eventos, setEventos] = useState([]);
+  const [pendientes, setPendientes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [nuevoLote, setNuevoLote] = useState({ codigo: '', expositor: '', contacto: '' });
@@ -23,14 +25,17 @@ export function EventoDetallePage() {
   async function cargar() {
     setError('');
     try {
-      const [ev, listaProductos, listaEventos] = await Promise.all([
+      const [ev, listaProductos, listaEventos, listaPendientes] = await Promise.all([
         api.get(`/eventos/${id}`),
         api.get('/productos?activo=1'),
         api.get('/eventos'),
+        // Si esto falla no es motivo para dejar el evento sin mostrar: solo no aparece la lista.
+        api.get(`/cotizaciones?estado=pendiente&eventoId=${id}`).catch(() => []),
       ]);
       setEvento(ev);
       setProductos(listaProductos);
       setEventos(listaEventos);
+      setPendientes(listaPendientes);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -195,6 +200,44 @@ export function EventoDetallePage() {
           Creado por {evento.creado_por_nombre || evento.creado_por_usuario}
         </p>
       </div>
+
+      {pendientes.length > 0 && (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Presupuestos pendientes de confirmación ({pendientes.length})</h3>
+          <p className="texto-suave">
+            Todavía no forman parte del evento: no suman en los totales ni en la facturación hasta que se confirman.
+          </p>
+          <div className="tabla-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cód. de facturación</th>
+                  <th>Lote</th>
+                  <th>Cliente</th>
+                  <th>Fecha</th>
+                  <th className="num">Total con IVA</th>
+                  <th>Responsable</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendientes.map((c) => (
+                  <tr key={c.id} onClick={() => navigate(`/presupuestos/carga/${c.id}`)} style={{ cursor: 'pointer' }}>
+                    <td>{c.cod_fac || <span className="texto-suave">—</span>}</td>
+                    <td>
+                      {c.lote || '—'}
+                      {c.nombre_stand ? ` — ${c.nombre_stand}` : ''}
+                    </td>
+                    <td>{c.razon_social || '—'}</td>
+                    <td>{fechaCorta(c.fecha_carga)}</td>
+                    <td className="num">{c.cantidad_lineas > 0 ? pesos(c.total) : '—'}</td>
+                    <td>{c.responsable || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Lotes</h3>
