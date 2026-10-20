@@ -489,11 +489,21 @@ el CUIT.
 
 En **Totales**, **Por evento** muestra las cantidades y la facturación (sin IVA) de un evento.
 **Facturación de todo el año** suma, para un año a elección, todos los eventos que empiezan ese año:
-el total, y cómo se reparte por mes, por rubro y por evento (tocando un evento se ve su detalle por
-producto). Usa el mismo cálculo que la facturación por evento, así que los números cierran.
+el total, y cómo se reparte por mes, por rubro y por evento. Usa el mismo cálculo que la facturación
+por evento, así que los números cierran.
 
-- **Imprimir informe (PDF)** abre el informe del año en una pestaña nueva para verlo e imprimirlo
-  (A4, mismo estilo que el PDF del presupuesto). Lleva el total, por mes, por rubro y por evento.
+Se puede **filtrar por mes** (los eventos que empiezan en ese mes) y **por evento**. Con un mes elegido
+desaparece la tabla "Por mes" y los porcentajes pasan a ser del mes. Cambiar el año o el mes quita el
+filtro de evento, porque cada evento pertenece a un año y un mes.
+
+- **Imprimir informe (PDF)** abre el informe en una pestaña nueva para verlo e imprimirlo (A4, mismo
+  estilo que el PDF del presupuesto). Imprime lo que se está viendo: el año entero, o el mes elegido.
+- **El informe de un evento** se abre tocándolo en la lista "Por evento", eligiéndolo en el filtro
+  Evento, o desde **Totales → Por evento → Facturación (sin IVA)**. Muestra el total, los **totales por
+  rubro** y dos vistas: **Detalle por rubro** (los productos de cada rubro) y **Pedidos por lote** (cada
+  lote con lo que pidió y cuánto suma; tocándolo se despliega). Su **Imprimir informe (PDF)** imprime la
+  vista que se esté viendo, siempre con los totales por rubro. Un lote cuenta aunque su presupuesto
+  todavía no tenga ítems (suma $ 0); uno que sólo tiene presupuestos cancelados no aparece.
 - **No** muestra la facturación por estado de cobro (cobrado, pendiente de pago…): los estados de
   los presupuestos viejos no están al día, así que ese desglose no sería correcto. El servidor
   igual lo calcula (`porEstado` en `/api/eventos/facturacion-anual`) por si se vuelve a mostrar

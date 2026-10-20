@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/requireAuth');
 const { bloquearSiSoloEstado } = require('../middleware/restringirEscritura');
 const eventosService = require('../services/eventosService');
 const informeAnualPdfService = require('../services/informeAnualPdfService');
+const informeEventoPdfService = require('../services/informeEventoPdfService');
 
 const router = express.Router();
 
@@ -32,20 +33,33 @@ function anioPedido(req, anios) {
 
 const ERROR_ANIO = { error: 'El año tiene que ser de 4 cifras (ej. 2026)' };
 
-// Estas dos van antes de '/:id', que si no las tomaría como un id.
+/** El mes pedido en ?mes= (1 a 12). Sin mes, undefined (todo el año). Null si no es válido. */
+function mesPedido(req) {
+  const pedido = req.query.mes;
+  if (pedido === undefined || pedido === '') return undefined;
+  return /^(0?[1-9]|1[0-2])$/.test(String(pedido)) ? Number(pedido) : null;
+}
+
+const ERROR_MES = { error: 'El mes tiene que ser un número de 1 a 12' };
+
+// Estas van antes de '/:id', que si no las tomaría como un id.
 router.get('/facturacion-anual', (req, res) => {
   const anios = eventosService.aniosConPresupuestos();
   const anio = anioPedido(req, anios);
   if (anio === null) return res.status(400).json(ERROR_ANIO);
-  res.json({ ...eventosService.facturacionAnual(anio), anios });
+  const mes = mesPedido(req);
+  if (mes === null) return res.status(400).json(ERROR_MES);
+  res.json({ ...eventosService.facturacionAnual(anio, { mes }), anios });
 });
 
-// El informe del año para imprimir: se abre en el visor de PDF del navegador.
+// El informe del año (o de un mes) para imprimir: se abre en el visor de PDF del navegador.
 router.get('/facturacion-anual/pdf', async (req, res, next) => {
   try {
     const anio = anioPedido(req, eventosService.aniosConPresupuestos());
     if (anio === null) return res.status(400).json(ERROR_ANIO);
-    await informeAnualPdfService.streamPdf(res, anio);
+    const mes = mesPedido(req);
+    if (mes === null) return res.status(400).json(ERROR_MES);
+    await informeAnualPdfService.streamPdf(res, anio, { mes });
   } catch (err) {
     next(err);
   }
@@ -67,6 +81,26 @@ router.get('/:id/facturacion', (req, res) => {
   const evento = eventosService.obtener(Number(req.params.id));
   if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
   res.json(eventosService.facturacionPorEvento(Number(req.params.id)));
+});
+
+// El informe de un evento: total, totales por rubro (con sus productos) y pedidos por lote.
+router.get('/:id/facturacion/informe', (req, res) => {
+  const informe = eventosService.informeFacturacionEvento(Number(req.params.id));
+  if (!informe) return res.status(404).json({ error: 'Evento no encontrado' });
+  res.json(informe);
+});
+
+// El mismo informe para imprimir. ?vista=rubro (por defecto) trae el detalle de cada rubro; ?vista=lote, los pedidos por lote.
+router.get('/:id/facturacion/pdf', async (req, res, next) => {
+  try {
+    const vista = req.query.vista === undefined ? 'rubro' : String(req.query.vista);
+    if (!informeEventoPdfService.VISTAS.includes(vista)) return res.status(400).json({ error: "La vista tiene que ser 'rubro' o 'lote'" });
+    const informe = eventosService.informeFacturacionEvento(Number(req.params.id));
+    if (!informe) return res.status(404).json({ error: 'Evento no encontrado' });
+    await informeEventoPdfService.streamPdf(res, informe, vista);
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/', bloquearSiSoloEstado, (req, res) => {

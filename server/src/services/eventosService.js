@@ -241,22 +241,26 @@ function aniosConPresupuestos() {
  * Facturación de todo un año (sin IVA), sumando los presupuestos de los eventos que empiezan ese año:
  * el total, y el desglose por mes, por estado de cobro, por rubro y por evento. Cada evento suma igual
  * que su total en facturacionPorEvento, así que la suma de los eventos es el total del año.
+ * Con `mes` (1 a 12) sólo cuenta los eventos que empiezan en ese mes, igual que la fila de ese mes en el desglose.
  */
-function facturacionAnual(anio) {
+function facturacionAnual(anio, { mes } = {}) {
   const clave = String(anio);
+  const claveMes = mes ? String(mes).padStart(2, '0') : null;
+  const FILTRO_FECHA = `substr(e.fecha_inicio, 1, 4) = ?${claveMes ? ' AND substr(e.fecha_inicio, 6, 2) = ?' : ''}`;
+  const params = claveMes ? [clave, claveMes] : [clave];
   const DESDE = `FROM presupuestos p
     JOIN lotes l ON l.id = p.lote_id
     JOIN eventos e ON e.id = l.evento_id
     LEFT JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
-    WHERE substr(e.fecha_inicio, 1, 4) = ? AND ${SQL_PRESUPUESTO_ACTIVO}`;
+    WHERE ${FILTRO_FECHA} AND ${SQL_PRESUPUESTO_ACTIVO}`;
 
   const general = db
     .prepare(`SELECT ${SUMA_FACTURACION} AS total, ${SUMA_SIN_PRECIO} AS sin_precio, COUNT(DISTINCT p.id) AS presupuestos, COUNT(DISTINCT e.id) AS eventos ${DESDE}`)
-    .get(clave);
+    .get(...params);
 
   const porMesFilas = db
     .prepare(`SELECT CAST(substr(e.fecha_inicio, 6, 2) AS INTEGER) AS mes, ${SUMA_FACTURACION} AS total, COUNT(DISTINCT e.id) AS eventos ${DESDE} GROUP BY mes`)
-    .all(clave);
+    .all(...params);
   const porMes = Array.from({ length: 12 }, (_, i) => {
     const fila = porMesFilas.find((f) => f.mes === i + 1);
     return { mes: i + 1, total: redondear(fila?.total), eventos: fila?.eventos || 0 };
@@ -264,7 +268,7 @@ function facturacionAnual(anio) {
 
   const porEstado = db
     .prepare(`SELECT p.estado AS estado, ${SUMA_FACTURACION} AS total, COUNT(DISTINCT p.id) AS presupuestos ${DESDE} GROUP BY p.estado ORDER BY total DESC, p.estado`)
-    .all(clave)
+    .all(...params)
     .map((f) => ({ estado: f.estado, total: redondear(f.total), presupuestos: f.presupuestos }));
 
   const porRubro = db
@@ -275,10 +279,10 @@ function facturacionAnual(anio) {
        JOIN eventos e ON e.id = l.evento_id
        JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
        JOIN productos prod ON prod.id = pl.producto_id
-       WHERE substr(e.fecha_inicio, 1, 4) = ? AND ${SQL_PRESUPUESTO_ACTIVO}
+       WHERE ${FILTRO_FECHA} AND ${SQL_PRESUPUESTO_ACTIVO}
        GROUP BY COALESCE(prod.rubro, 'Sin rubro') ORDER BY total DESC`
     )
-    .all(clave)
+    .all(...params)
     .map((f) => ({ rubro: f.rubro, total: redondear(f.total), cantidad: f.cantidad }));
 
   const porEvento = db
@@ -287,11 +291,12 @@ function facturacionAnual(anio) {
               ${SUMA_SIN_PRECIO} AS sin_precio, COUNT(DISTINCT p.id) AS presupuestos
        ${DESDE} GROUP BY e.id ORDER BY e.fecha_inicio DESC, e.nombre`
     )
-    .all(clave)
+    .all(...params)
     .map((f) => ({ id: f.id, nombre: f.nombre, fecha_inicio: f.fecha_inicio, total: redondear(f.total), lineasSinPrecio: f.sin_precio || 0, presupuestos: f.presupuestos }));
 
   return {
     anio: Number(anio),
+    mes: claveMes ? Number(claveMes) : null,
     total: redondear(general.total),
     lineasSinPrecio: general.sin_precio || 0,
     presupuestos: general.presupuestos,
@@ -300,6 +305,83 @@ function facturacionAnual(anio) {
     porEstado,
     porRubro,
     porEvento,
+  };
+}
+
+/**
+ * El informe de facturación de un evento (sin IVA), para la pantalla y para imprimir: el total, los totales por
+ * rubro (cada uno con el detalle de sus productos) y los pedidos por lote (qué pidió cada lote y cuánto suma).
+ * Cuenta los mismos presupuestos y los mismos precios que facturacionPorEvento, así que el total es el mismo
+ * y la suma de los lotes también. Null si el evento no existe.
+ */
+function informeFacturacionEvento(id) {
+  const evento = db.prepare('SELECT id, nombre, lugar, fecha_inicio, fecha_fin FROM eventos WHERE id = ?').get(id);
+  if (!evento) return null;
+
+  const porRubro = facturacionPorEvento(id).map((g) => ({
+    rubro: g.rubro,
+    cantidad: g.productos.reduce((acc, p) => acc + p.cantidad, 0),
+    total: redondear(g.subtotal),
+    lineasSinPrecio: g.lineasSinPrecio,
+    productos: g.productos.map((p) => ({ ...p, subtotal: redondear(p.subtotal) })),
+  }));
+
+  const ACTIVO_DEL_EVENTO = `l.evento_id = ? AND ${SQL_PRESUPUESTO_ACTIVO}`;
+  // Un lote cuenta aunque su presupuesto no tenga ítems todavía (suma $ 0): hay que verlo en la lista.
+  const lotes = db
+    .prepare(
+      `SELECT l.id, l.codigo, l.expositor, COUNT(DISTINCT p.id) AS presupuestos,
+              SUM(CASE WHEN pl.precio_unitario IS NOT NULL THEN pl.cantidad * pl.precio_unitario ELSE 0 END) AS total,
+              SUM(CASE WHEN pl.id IS NOT NULL AND pl.precio_unitario IS NULL THEN 1 ELSE 0 END) AS sin_precio
+       FROM lotes l
+       JOIN presupuestos p ON p.lote_id = l.id
+       LEFT JOIN presupuesto_lineas pl ON pl.presupuesto_id = p.id
+       WHERE ${ACTIVO_DEL_EVENTO}
+       GROUP BY l.id`
+    )
+    .all(id);
+
+  const productosPorLote = new Map();
+  const filasProductos = db
+    .prepare(
+      `SELECT l.id AS lote_id, prod.codigo, prod.nombre, COALESCE(prod.rubro, 'Sin rubro') AS rubro, SUM(pl.cantidad) AS cantidad,
+              SUM(CASE WHEN pl.precio_unitario IS NOT NULL THEN pl.cantidad * pl.precio_unitario ELSE 0 END) AS subtotal,
+              SUM(CASE WHEN pl.precio_unitario IS NULL THEN 1 ELSE 0 END) AS sin_precio
+       FROM presupuesto_lineas pl
+       JOIN presupuestos p ON p.id = pl.presupuesto_id
+       JOIN lotes l ON l.id = p.lote_id
+       JOIN productos prod ON prod.id = pl.producto_id
+       WHERE ${ACTIVO_DEL_EVENTO}
+       GROUP BY l.id, prod.id
+       ORDER BY prod.rubro, prod.nombre`
+    )
+    .all(id);
+  for (const f of filasProductos) {
+    if (!productosPorLote.has(f.lote_id)) productosPorLote.set(f.lote_id, []);
+    productosPorLote.get(f.lote_id).push({ codigo: f.codigo, nombre: f.nombre, rubro: f.rubro, cantidad: f.cantidad, subtotal: redondear(f.subtotal), lineasSinPrecio: f.sin_precio });
+  }
+
+  // Los códigos de lote mezclan números y letras ("2", "10", "A6"): se ordenan por número donde lo hay.
+  const porLote = lotes
+    .map((l) => ({
+      id: l.id,
+      codigo: l.codigo,
+      expositor: l.expositor,
+      presupuestos: l.presupuestos,
+      total: redondear(l.total),
+      lineasSinPrecio: l.sin_precio || 0,
+      productos: productosPorLote.get(l.id) || [],
+    }))
+    .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric: true, sensitivity: 'base' }));
+
+  return {
+    evento,
+    total: redondear(porRubro.reduce((acc, g) => acc + g.total, 0)),
+    lineasSinPrecio: porRubro.reduce((acc, g) => acc + g.lineasSinPrecio, 0),
+    presupuestos: porLote.reduce((acc, l) => acc + l.presupuestos, 0),
+    lotes: porLote.length,
+    porRubro,
+    porLote,
   };
 }
 
@@ -316,4 +398,5 @@ module.exports = {
   facturacionPorEvento,
   aniosConPresupuestos,
   facturacionAnual,
+  informeFacturacionEvento,
 };

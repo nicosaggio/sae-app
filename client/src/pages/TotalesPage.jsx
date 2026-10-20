@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { BuscadorEvento } from '../components/BuscadorEvento';
 import { FacturacionAnual } from '../components/FacturacionAnual';
-import { formatearMonto } from '../format';
+import { InformeFacturacionEvento } from '../components/InformeFacturacionEvento';
 
 export function TotalesPage() {
   const [modo, setModo] = useState('evento'); // 'evento' | 'anio'
@@ -10,7 +10,6 @@ export function TotalesPage() {
   const [eventoId, setEventoId] = useState(null);
   const [vista, setVista] = useState('cantidades');
   const [totales, setTotales] = useState(null);
-  const [facturacion, setFacturacion] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [rubrosExcluidos, setRubrosExcluidos] = useState(new Set());
@@ -26,16 +25,13 @@ export function TotalesPage() {
     setRubrosExcluidos(new Set());
     if (!eventoId) {
       setTotales(null);
-      setFacturacion(null);
       return;
     }
     setCargando(true);
     setError('');
-    Promise.all([api.get(`/eventos/${eventoId}/totales`), api.get(`/eventos/${eventoId}/facturacion`)])
-      .then(([t, f]) => {
-        setTotales(t);
-        setFacturacion(f);
-      })
+    api
+      .get(`/eventos/${eventoId}/totales`)
+      .then(setTotales)
       .catch((err) => setError(err.message))
       .finally(() => setCargando(false));
   }, [eventoId]);
@@ -57,12 +53,6 @@ export function TotalesPage() {
     ? `/api/eventos/${eventoId}/export/pdf` + (hayFiltro ? `?rubros=${encodeURIComponent(rubrosIncluidos.join(','))}` : '')
     : null;
 
-  function verEvento(id) {
-    setEventoId(id);
-    setVista('facturacion');
-    setModo('evento');
-  }
-
   return (
     <div>
       <h2>Totales</h2>
@@ -77,7 +67,7 @@ export function TotalesPage() {
       </div>
 
       {modo === 'anio' ? (
-        <FacturacionAnual onVerEvento={verEvento} />
+        <FacturacionAnual />
       ) : (
         <>
       <div className="card">
@@ -115,9 +105,11 @@ export function TotalesPage() {
 
       {!eventoId ? (
         <p className="texto-suave">Elegí un evento para ver sus totales.</p>
-      ) : cargando || !totales || !facturacion ? (
+      ) : vista === 'facturacion' ? (
+        <InformeFacturacionEvento eventoId={eventoId} />
+      ) : cargando || !totales ? (
         <p className="texto-suave">Cargando…</p>
-      ) : vista === 'cantidades' ? (
+      ) : (
         <div className="card">
           <h3 style={{ marginTop: 0 }}>{evento?.nombre}</h3>
           {totales.length === 0 ? (
@@ -167,71 +159,6 @@ export function TotalesPage() {
                   </p>
                 </div>
               ))}
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>{evento?.nombre}</h3>
-          <p className="texto-suave" style={{ marginTop: 0 }}>
-            Precio unitario tal como figura en el presupuesto de cada línea (columna VALOR UNITARIO del Excel), sin
-            IVA.
-          </p>
-          {facturacion.length === 0 ? (
-            <p className="texto-suave">Todavía no hay productos cargados en ningún lote.</p>
-          ) : (
-            <>
-              {facturacion.map((grupo) => (
-                <div key={grupo.rubro} style={{ marginBottom: 12 }}>
-                  <strong>{grupo.rubro}</strong>
-                  <div className="tabla-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Producto</th>
-                        <th>Código</th>
-                        <th>Cantidad</th>
-                        <th>Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {grupo.productos.map((p) => (
-                        <tr key={p.codigo || p.nombre}>
-                          <td>{p.nombre}</td>
-                          <td>{p.codigo || '—'}</td>
-                          <td>{p.cantidad}</td>
-                          <td>
-                            {formatearMonto(p.subtotal)}
-                            {p.lineasSinPrecio > 0 && (
-                              <span className="texto-suave"> (falta precio en {p.lineasSinPrecio})</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan={3}>Total {grupo.rubro}</td>
-                        <td>{formatearMonto(grupo.subtotal)}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                  </div>
-                  {grupo.lineasSinPrecio > 0 && (
-                    <p className="texto-suave" style={{ marginTop: 4 }}>
-                      {grupo.lineasSinPrecio} línea(s) sin precio cargado, no incluidas en el total.
-                    </p>
-                  )}
-                </div>
-              ))}
-              <div className="card" style={{ background: 'var(--color-primario-claro)', marginBottom: 0 }}>
-                <div className="toolbar" style={{ marginBottom: 0, justifyContent: 'space-between' }}>
-                  <strong>Total del evento (sin IVA)</strong>
-                  <strong style={{ fontSize: 18 }}>
-                    {formatearMonto(facturacion.reduce((acc, g) => acc + g.subtotal, 0))}
-                  </strong>
-                </div>
-              </div>
             </>
           )}
         </div>
