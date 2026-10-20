@@ -32,6 +32,11 @@ function Columnas() {
   );
 }
 
+/** Texto en minúsculas y sin tildes, para comparar "cafe" con "Café". */
+function sinTildes(texto) {
+  return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 /** Tabla de cotizaciones (presupuestos cargados desde la app que no forman parte de un evento). */
 function TablaCotizaciones({ lista, cargando, mensajeVacio, badgeClase, badgeTexto, onAbrir }) {
   if (cargando) return <p className="texto-suave">Cargando…</p>;
@@ -86,6 +91,7 @@ export function PresupuestosPage() {
   const [eventoId, setEventoId] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [lote, setLote] = useState('');
+  const [stand, setStand] = useState('');
   const [productos, setProductos] = useState([]);
   const [presupuestoAbiertoId, setPresupuestoAbiertoId] = useState(null);
   const [presupuestoAbierto, setPresupuestoAbierto] = useState(null);
@@ -146,6 +152,11 @@ export function PresupuestosPage() {
     [verRechazados, eventoId]
   );
 
+  // El nombre de stand se filtra acá y no en el servidor para que ignore tildes y mayúsculas. Es el que se
+  // ve en la columna Lote: `nombre_stand` en los presupuestos de la app, el expositor del lote en los confirmados.
+  const buscadoStand = sinTildes(stand).trim();
+  const coincideStand = (nombre) => !buscadoStand || sinTildes(nombre).includes(buscadoStand);
+
   // Ni los pendientes ni los rechazados tienen estado de facturación: si se filtra por estado, no aparecen
   function filtrarSinEstado(lista) {
     return estado
@@ -153,12 +164,14 @@ export function PresupuestosPage() {
       : (lista || []).filter(
           (c) =>
             (!lote || (c.lote || '').toLowerCase().includes(lote.toLowerCase())) &&
+            coincideStand(c.nombre_stand) &&
             (!desde || (c.evento_fecha_inicio || '') >= desde) &&
             (!hasta || (c.evento_fecha_inicio || '9999') <= hasta)
         );
   }
   const pendientes = filtrarSinEstado(pendientesTodos);
   const rechazados = filtrarSinEstado(rechazadosTodos);
+  const confirmados = (presupuestos || []).filter((p) => coincideStand(p.lote_expositor));
 
   function cargarPresupuestoAbierto(id) {
     api
@@ -226,6 +239,10 @@ export function PresupuestosPage() {
             <input placeholder="N° de lote" value={lote} onChange={(e) => setLote(e.target.value)} />
           </div>
           <div className="campo">
+            <label>Nombre de stand</label>
+            <input placeholder="Buscar por nombre de stand" value={stand} onChange={(e) => setStand(e.target.value)} />
+          </div>
+          <div className="campo">
             <label>Estado</label>
             <select value={estado} onChange={(e) => setEstado(e.target.value)} disabled={!verConfirmados}>
               <option value="">Todos</option>
@@ -276,10 +293,10 @@ export function PresupuestosPage() {
 
         {verConfirmados && (
           <div>
-            {titulos && <h3 style={{ marginTop: 0 }}>Confirmados ({presupuestos ? presupuestos.length : 0})</h3>}
+            {titulos && <h3 style={{ marginTop: 0 }}>Confirmados ({confirmados.length})</h3>}
             {cargando ? (
               <p className="texto-suave">Cargando…</p>
-            ) : !presupuestos || presupuestos.length === 0 ? (
+            ) : confirmados.length === 0 ? (
               <p className="texto-suave">No hay presupuestos confirmados con estos filtros.</p>
             ) : (
               <div className="tabla-scroll">
@@ -298,7 +315,7 @@ export function PresupuestosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {presupuestos.map((p) => (
+                  {confirmados.map((p) => (
                     <tr key={p.id} onClick={() => abrirPresupuesto(p.id)} style={{ cursor: 'pointer' }}>
                       <td>{p.cod_fac || <span className="texto-suave">—</span>}</td>
                       <td>{p.evento_nombre}</td>

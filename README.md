@@ -355,6 +355,10 @@ Cada presupuesto tiene tres estados:
 La ventana **Presupuestos** tiene el filtro **Confirmación: Confirmados / No confirmados /
 Rechazados / Todos**. Por defecto muestra "Confirmados", igual que antes.
 
+El campo **Nombre de stand** busca en las tres listas por el nombre que se ve en la columna Lote
+(después del número de lote). No distingue mayúsculas ni tildes: "cafe" encuentra "Café". Se combina con
+los demás filtros y al vaciarlo vuelven todos.
+
 Un presupuesto confirmado además tiene su **estado de cobro** (Pendiente de facturar, Facturado,
 Pendiente de pago, Cobrado o **Cancelado**). Un presupuesto **cancelado** queda como registro (se ve
 en las listas y en el evento y se puede reabrir cambiándole el estado) pero **no cuenta**: no sale en
