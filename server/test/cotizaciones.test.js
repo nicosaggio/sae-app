@@ -874,3 +874,19 @@ test('cambiar sólo el número del lote (desde el presupuesto confirmado): conse
   assert.equal(enLista.cod_fac, `${cot.generarIdCliente({ evento: 'CAPPER', tipo: 'SAE', lote: '72', nombre_stand: 'GAMMA STAND', responsable: 'Oper Uno' })}-1`);
   assert.equal(db.prepare('SELECT codigo FROM lotes WHERE id = ?').get(otro).codigo, '71', 'los demás lotes no se tocan');
 });
+
+test('la lista de presupuestos confirmados trae el mail del cliente (el de la app, y el contacto donde también va escrito) para poder filtrar', async () => {
+  const p = await nuevaCompleta({ lote: '80', nombre_stand: 'DELTA STAND', contacto: 'Laura', mail: 'laura@delta.com' });
+  await api('oper1', 'POST', `/${p.id}/lineas`, { catalogo_item_id: idDe('CE-100'), cantidad: 1 });
+  const confirmada = (await api('oper1', 'POST', `/${p.id}/confirmar`)).cuerpo;
+
+  const lista = (await llamar('oper1', 'GET', '/presupuestos')).cuerpo;
+  const fila = lista.find((x) => x.id === confirmada.presupuesto_id);
+  assert.equal(fila.cotizacion_mail, 'laura@delta.com');
+  assert.equal(fila.cliente_contacto, 'Laura - laura@delta.com');
+
+  // Un presupuesto que vino de Excel no tiene cotización original: no hay mail aparte (si lo hay, va en el contacto)
+  const deExcel = lista.find((x) => x.origen === 'excel');
+  assert.ok(deExcel, 'hay uno de Excel en la lista');
+  assert.equal(deExcel.cotizacion_mail, null);
+});

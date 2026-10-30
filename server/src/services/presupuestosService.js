@@ -24,12 +24,13 @@ function listarPorLote(loteId) {
   return db.prepare('SELECT * FROM presupuestos WHERE lote_id = ? ORDER BY id DESC').all(loteId);
 }
 
-// Para la lista: además del contexto, el código de facturación y el responsable de los presupuestos que
-// se cargaron desde la app (salen de la cotización original). Los que vienen de Excel no los tienen: null.
+// Para la lista: además del contexto, el código de facturación, el responsable y el mail del cliente de los
+// presupuestos que se cargaron desde la app (salen de la cotización original). Los que vienen de Excel no
+// los tienen: null (su mail, si lo hay, está dentro de `cliente_contacto`).
 const SELECT_PRESUPUESTO_LISTA = `
   SELECT p.*, l.codigo AS lote_codigo, l.expositor AS lote_expositor,
          e.id AS evento_id, e.nombre AS evento_nombre, e.fecha_inicio, e.fecha_fin,
-         c.responsable AS responsable,
+         c.responsable AS responsable, c.mail AS cotizacion_mail,
          CASE WHEN c.id_cliente IS NOT NULL AND c.id_cliente <> '' AND c.numero IS NOT NULL AND c.numero > 0
               THEN c.id_cliente || '-' || c.numero END AS cod_fac
   FROM presupuestos p

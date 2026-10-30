@@ -160,6 +160,7 @@ export function PresupuestosPage() {
   const [eventos, setEventos] = useState([]);
   const [lote, setLote] = useState('');
   const [stand, setStand] = useState('');
+  const [mail, setMail] = useState('');
   const [productos, setProductos] = useState([]);
   const [presupuestoAbiertoId, setPresupuestoAbiertoId] = useState(null);
   const [presupuestoAbierto, setPresupuestoAbierto] = useState(null);
@@ -225,6 +226,12 @@ export function PresupuestosPage() {
   const buscadoStand = sinTildes(stand).trim();
   const coincideStand = (nombre) => !buscadoStand || sinTildes(nombre).includes(buscadoStand);
 
+  // El mail del cliente se filtra igual, buscando el texto en cualquiera de los datos que lo guardan: el mail
+  // del presupuesto de la app y, en los confirmados, el contacto del presupuesto (ahí va "contacto - mail",
+  // y en los que vinieron de Excel es donde estuviera escrito).
+  const buscadoMail = sinTildes(mail).trim();
+  const coincideMail = (...textos) => !buscadoMail || textos.some((t) => sinTildes(t).includes(buscadoMail));
+
   // Ni los pendientes ni los rechazados tienen estado de facturación: si se filtra por estado, no aparecen
   function filtrarSinEstado(lista) {
     return estado
@@ -233,13 +240,14 @@ export function PresupuestosPage() {
           (c) =>
             (!lote || (c.lote || '').toLowerCase().includes(lote.toLowerCase())) &&
             coincideStand(c.nombre_stand) &&
+            coincideMail(c.mail) &&
             (!desde || (c.evento_fecha_inicio || '') >= desde) &&
             (!hasta || (c.evento_fecha_inicio || '9999') <= hasta)
         );
   }
   const pendientes = filtrarSinEstado(pendientesTodos);
   const rechazados = filtrarSinEstado(rechazadosTodos);
-  const confirmados = (presupuestos || []).filter((p) => coincideStand(p.lote_expositor));
+  const confirmados = (presupuestos || []).filter((p) => coincideStand(p.lote_expositor) && coincideMail(p.cliente_contacto, p.cotizacion_mail));
 
   function cargarPresupuestoAbierto(id) {
     api
@@ -309,6 +317,10 @@ export function PresupuestosPage() {
           <div className="campo">
             <label>Nombre de stand</label>
             <input placeholder="Buscar por nombre de stand" value={stand} onChange={(e) => setStand(e.target.value)} />
+          </div>
+          <div className="campo">
+            <label>Mail del cliente</label>
+            <input placeholder="Buscar por mail" value={mail} onChange={(e) => setMail(e.target.value)} />
           </div>
           <div className="campo">
             <label>Estado</label>

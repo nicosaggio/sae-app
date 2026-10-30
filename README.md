@@ -373,6 +373,11 @@ El campo **Nombre de stand** busca en las tres listas por el nombre que se ve en
 (después del número de lote). No distingue mayúsculas ni tildes: "cafe" encuentra "Café". Se combina con
 los demás filtros y al vaciarlo vuelven todos.
 
+El campo **Mail del cliente** funciona igual (sin mayúsculas ni tildes, también con un pedazo: "@gmail" o
+"enerminds") y busca en las tres listas. En los pendientes y rechazados mira el mail del presupuesto; en
+los confirmados, el mail del presupuesto original y el contacto del presupuesto (ahí va "contacto - mail";
+en los que vinieron de Excel es donde estuviera escrito el mail).
+
 Un presupuesto confirmado además tiene su **estado de cobro** (Pendiente de facturar, Facturado,
 Pendiente de pago, Cobrado o **Cancelado**). Un presupuesto **cancelado** queda como registro (se ve
 en las listas y en el evento y se puede reabrir cambiándole el estado) pero **no cuenta**: no sale en
