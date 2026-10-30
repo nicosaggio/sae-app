@@ -382,7 +382,24 @@ filtros): arriba el número de lote, con el botón "Cambiar n.º de lote"; despu
 presupuesto, que se guardan solos al salir de cada campo ("Guardado ✓"), y los productos, que se
 agregan, se editan en su propia fila y se quitan. Quitar un producto y borrar el presupuesto piden
 confirmación en una ventana de la app. Un usuario "solo estado" ve todo y sólo puede cambiar el estado
-de cobro. El mismo contenido aparece, dentro de cada lote, en la pantalla del evento.
+de cobro. Es el mismo panel que se abre desde la pantalla del evento.
+
+La **pantalla del evento** (se abre desde el calendario) tiene arriba el nombre, el lugar, las fechas y
+cuánto falta ("Empieza en 12 días", "En curso", "Terminó hace 3 días"). Debajo, la **regla de fases**:
+una barra con el armado (rayado), el evento (sólido) y el desarme (punteado) sobre una regla con un
+número por día y la marca de "Hoy"; se arma sólo con las fechas del evento y se redibuja mientras se
+escriben. En **Datos del evento** cada campo se guarda solo al salir de él y la tarjeta dice
+"Guardando…" y "Guardado"; no se guarda mientras el nombre esté vacío o la fecha de fin sea anterior a la
+de inicio (lo avisa). Si hay presupuestos pendientes de confirmación, se listan aparte (un clic abre el
+presupuesto). Los **lotes** son filas plegables con su expositor, cuántos presupuestos tienen, su estado
+de cobro (o "Estados varios" si no coinciden) y el total, sin contar los cancelados; hay un botón para
+desplegarlos o contraerlos todos. Al abrir un lote están el croquis, **Editar lote** (que avisa que el
+número nuevo también pasa a los presupuestos de la app y recalcula su código de facturación), **Nuevo
+presupuesto** (en una ventana), **Borrar lote** (con confirmación, y borra sus presupuestos) y la tabla
+de sus presupuestos, donde se cambia el estado de cobro y se abre cada uno en el panel. Crear un lote
+con un número que el evento ya tiene da error (como al editarlo). **Unificar con otro evento…** está en
+el menú ⋯ y pide confirmar, porque borra el evento elegido. Un usuario "solo estado" ve todo y sólo
+puede cambiar el estado de cobro de los presupuestos.
 
 El campo **Nombre de stand** busca en las tres listas por el nombre que se ve en la columna Lote
 (después del número de lote). No distingue mayúsculas ni tildes: "cafe" encuentra "Café". Se combina con
