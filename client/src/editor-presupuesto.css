@@ -15,18 +15,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Avisos de arriba: si no hay ninguno, el contenedor no ocupa lugar */
-.ed .avisos {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  margin-bottom: var(--s-5);
-}
-
-.ed .avisos:empty {
-  display: none;
-}
-
 .ed .riel {
   position: sticky;
   top: var(--s-4);

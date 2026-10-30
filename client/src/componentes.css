@@ -1136,6 +1136,11 @@
   padding-top: 8px;
 }
 
+.ed .tabla--panel .tachado {
+  color: var(--c-texto-3);
+  text-decoration: line-through;
+}
+
 /* ---------- Esqueleto de carga ---------- */
 .ed .esqueleto {
   height: 30px;
@@ -1259,6 +1264,253 @@
   line-height: 1.1;
 }
 
+/* Avisos de arriba: si no hay ninguno, el contenedor no ocupa lugar */
+.ed .avisos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.ed .avisos:empty {
+  display: none;
+}
+
+/* ---------- La regla de fases (armado · evento · desarme) ---------- */
+.fases {
+  display: block;
+  width: 100%;
+}
+
+.fases-pista {
+  position: relative;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--c-superficie-3);
+}
+
+.fase {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+
+.fase--armado {
+  border: 1px solid var(--c-texto-2);
+  background: repeating-linear-gradient(135deg, var(--c-texto-2) 0 1.5px, transparent 1.5px 5px), var(--c-superficie);
+}
+
+.fase--evento {
+  background: var(--c-ciruela);
+}
+
+.fase--evento.con-desarme::after {
+  content: 'D';
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--c-sobre-ciruela);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.fase--desarme {
+  border: 1px solid var(--c-texto-2);
+  background: radial-gradient(var(--c-texto-2) 1.2px, transparent 1.6px) 0 0 / 5px 5px, var(--c-superficie);
+}
+
+.fases-hoy {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--c-texto);
+}
+
+.fases-hoy::after {
+  content: attr(data-etiqueta);
+  position: absolute;
+  top: -17px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--c-superficie);
+  color: var(--c-texto);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fases-regla {
+  position: relative;
+  height: 26px;
+  margin-top: 3px;
+  background: repeating-linear-gradient(90deg, var(--c-texto-3) 0 1px, transparent 1px var(--paso, 24px)) 0 0 / 100% 6px no-repeat, linear-gradient(var(--c-texto-3), var(--c-texto-3)) 0 0 / 100% 1px no-repeat;
+  color: var(--c-texto-2);
+  font-size: 11px;
+}
+
+.fases-regla span {
+  position: absolute;
+  top: 9px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.fases-regla span.es-hoy {
+  color: var(--c-texto);
+  font-weight: 700;
+}
+
+.fases--mini .fases-pista {
+  height: 8px;
+}
+
+.fases--mini .fases-hoy {
+  top: -3px;
+  bottom: -3px;
+}
+
+.fases--mini .fases-hoy::after,
+.fases--mini .fases-regla {
+  display: none;
+}
+
+.ed .leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+  color: var(--c-texto-2);
+  font-size: var(--t-sm);
+}
+
+.ed .leyenda i {
+  display: inline-block;
+  width: 22px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+
+.ed .leyenda .l-evento {
+  background: var(--c-ciruela);
+}
+
+.ed .leyenda .l-armado {
+  border: 1px dashed var(--c-texto-2);
+  background: repeating-linear-gradient(135deg, var(--c-texto-2) 0 1.5px, transparent 1.5px 5px), var(--c-superficie);
+}
+
+.ed .leyenda .l-desarme {
+  border: 1px dotted var(--c-texto-2);
+  background: radial-gradient(var(--c-texto-2) 1.2px, transparent 1.6px) 0 0 / 5px 5px, var(--c-superficie);
+}
+
+/* ---------- Lotes plegables ---------- */
+.ed .lote-fila {
+  border-bottom: 1px solid var(--c-borde);
+}
+
+.ed .lote-fila:last-child {
+  border-bottom: 0;
+}
+
+.ed .lote-cab {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  width: 100%;
+  padding: 10px var(--s-5);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--c-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ed .lote-cab:hover {
+  background: var(--c-ciruela-50);
+}
+
+.ed .lote-cab:focus-visible {
+  outline: 2px solid var(--c-ciruela);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.ed .lote-fila--abierto > .lote-cab {
+  background: var(--c-superficie-2);
+}
+
+.ed .lote-cab .chevron {
+  color: var(--c-texto-3);
+  transition: transform 0.12s;
+}
+
+.ed .lote-fila--abierto .chevron {
+  transform: rotate(90deg);
+}
+
+.ed .lote-cod {
+  min-width: 64px;
+  font-family: var(--f-display);
+  font-weight: 600;
+}
+
+.ed .lote-nombre {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ed .lote-cuenta {
+  min-width: 96px;
+  color: var(--c-texto-2);
+  text-align: right;
+}
+
+.ed .lote-cobro {
+  min-width: 170px;
+}
+
+.ed .lote-total {
+  min-width: 128px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ed .lote-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: 0 var(--s-5) var(--s-4) calc(var(--s-5) + 28px);
+}
+
+.ed .lote-edicion {
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--c-superficie-2);
+}
+
+.ed .dialogo-cab .sub {
+  margin-top: 2px;
+}
+
+.ed .dialogo-cuerpo.pila {
+  gap: var(--s-4);
+}
+
 /* ---------- Pantallas angostas ---------- */
 @media (max-width: 1180px) {
   .ed .grid-4 {
@@ -1288,6 +1540,30 @@
 }
 
 @media (max-width: 768px) {
+  /* La regla de fases en el celular: con un número por día se pisan; se deja uno de cada tres */
+  .fases-regla span:not(:nth-child(3n + 1)) {
+    display: none;
+  }
+
+  .ed .lote-cab {
+    padding-left: var(--s-4);
+    padding-right: var(--s-4);
+  }
+
+  .ed .lote-cuenta,
+  .ed .lote-total {
+    min-width: 0;
+  }
+
+  .ed .lote-cobro {
+    min-width: 0;
+  }
+
+  .ed .lote-detalle {
+    padding-left: var(--s-4);
+    padding-right: var(--s-4);
+  }
+
   /* En el celular los campos y botones siguen grandes para tocar (ver index.css) */
   .ed .boton,
   .ed .campo input:where(:not([type='checkbox']):not([type='file'])),
