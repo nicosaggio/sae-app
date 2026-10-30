@@ -45,7 +45,12 @@ export function Layout() {
             </NavLink>
           ))}
           <NavLink to="/alertas" className={({ isActive }) => (isActive ? 'active' : '')} onClick={cerrarMenu}>
-            Alertas{totalAlertas > 0 && <span className="badge tipo" style={{ marginLeft: 6 }}>{totalAlertas}</span>}
+            Alertas
+            {totalAlertas > 0 && (
+              <span className="contador" title={`${totalAlertas} ${totalAlertas === 1 ? 'alerta de pago' : 'alertas de pago'}`}>
+                {totalAlertas}
+              </span>
+            )}
           </NavLink>
         </nav>
         <div className="usuario-box">

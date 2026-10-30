@@ -1,25 +1,26 @@
+/* Las variables --color-* son las de siempre; ahora salen de los tokens (tokens.css) para que toda la app
+   tome la paleta nueva. Los textos de color (peligro, éxito, aviso, info) usan la variante "fg", la que pasa AA. */
 :root {
-  --color-fondo: #f4f5f7;
-  --color-superficie: #ffffff;
-  --color-borde: #e0e3e8;
-  --color-texto: #1f2430;
-  --color-texto-suave: #6b7280;
-  --color-primario: #a671aa;
-  --color-primario-hover: #8b5892;
-  --color-primario-claro: #f3e9f4;
-  --color-oscuro: #211f1e;
-  --color-oscuro-suave: #34302f;
-  --color-peligro: #dc2626;
-  --color-peligro-fondo: #fee2e2;
-  --color-exito: #16a34a;
-  --color-exito-fondo: #dcfce7;
-  --color-advertencia: #d97706;
-  --color-advertencia-fondo: #fef3c7;
-  --color-gris-fondo: #f1f2f4;
-  --color-info: #2563eb;
-  --color-info-fondo: #dbeafe;
+  --color-fondo: var(--c-papel);
+  --color-superficie: var(--c-superficie);
+  --color-borde: var(--c-borde);
+  --color-texto: var(--c-texto);
+  --color-texto-suave: var(--c-texto-2);
+  --color-primario: var(--c-ciruela);
+  --color-primario-hover: var(--c-ciruela-hover);
+  --color-primario-claro: var(--c-ciruela-50);
+  --color-oscuro: #211f1e; /* sólo el fondo del login */
+  --color-peligro: var(--c-peligro-fg);
+  --color-peligro-fondo: var(--c-peligro-bg);
+  --color-exito: var(--c-ok-fg);
+  --color-exito-fondo: var(--c-ok-bg);
+  --color-advertencia: var(--c-aviso-fg);
+  --color-advertencia-fondo: var(--c-aviso-bg);
+  --color-gris-fondo: var(--c-superficie-2);
+  --color-info: var(--c-info-fg);
+  --color-info-fondo: var(--c-info-bg);
   --radio: 8px;
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --sombra: var(--sombra-1);
 }
 
 * {
@@ -56,17 +57,26 @@ h1, h2, h3 {
   min-height: 100vh;
 }
 
+/* Barra lateral clara: el logo es un JPG con fondo blanco y así no necesita caja. */
 .sidebar {
-  width: 230px;
-  background: var(--color-oscuro);
-  padding: 20px 12px;
+  width: 244px;
+  background: var(--c-superficie);
+  border-right: 1px solid var(--c-borde);
+  padding: 20px 12px 16px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+  overflow-y: auto;
 }
 
 .sidebar .logo-box {
-  background: #ffffff;
+  background: var(--placa-logo);
   border-radius: var(--radio);
-  padding: 10px;
+  padding: 8px 12px;
   margin: 0 8px 20px;
   display: flex;
   justify-content: center;
@@ -81,33 +91,72 @@ h1, h2, h3 {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-bottom: 24px;
 }
 
 .sidebar nav a, .sidebar nav .nav-link {
-  padding: 10px 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
   border-radius: var(--radio);
-  color: #d8d3d6;
+  color: var(--c-texto-2);
   font-size: 14px;
   font-weight: 500;
-  display: block;
 }
 
 .sidebar nav a:hover {
-  background: var(--color-oscuro-suave);
-  color: #ffffff;
+  background: var(--c-superficie-2);
+  color: var(--c-texto);
 }
 
 .sidebar nav a.active {
-  background: var(--color-primario);
+  background: var(--c-ciruela-100);
+  color: var(--c-ciruela-oscuro);
+  font-weight: 600;
+}
+
+/* La marca de la página actual: un tope de ciruela contra el borde de la barra */
+.sidebar nav a.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--c-ciruela);
+}
+
+.sidebar nav a:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+/* Cantidad de alertas de pago al lado de "Alertas" */
+.contador {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--c-boton-peligro);
   color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar .usuario-box {
-  margin-top: 24px;
+  margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid var(--c-borde);
   font-size: 13px;
-  color: #b8b3b6;
+  color: var(--c-texto-2);
 }
 
 .sidebar .usuario-box button {
@@ -126,7 +175,7 @@ h1, h2, h3 {
 .main {
   flex: 1;
   min-width: 0; /* si no, un hijo ancho (tabla, grilla) empuja el ancho del flex item y desborda la página */
-  overflow-x: hidden; /* red de seguridad: ningún hijo (ancho o sin wrap) puede forzar scroll horizontal de toda la página */
+  overflow-x: clip; /* red de seguridad: ningún hijo (ancho o sin wrap) puede forzar scroll horizontal de toda la página. `clip` y no `hidden`: `hidden` vuelve a .main un contenedor de scroll y rompe los `position: sticky` de adentro (el riel del editor) */
   padding: 28px 32px;
   max-width: 1400px;
   text-align: left;
@@ -1082,7 +1131,8 @@ ul.adjuntos li {
     display: flex;
     align-items: center;
     gap: 12px;
-    background: var(--color-oscuro);
+    background: var(--c-superficie);
+    border-bottom: 1px solid var(--c-borde);
     padding: 8px 12px;
     position: sticky;
     top: 0;
@@ -1092,14 +1142,14 @@ ul.adjuntos li {
   .topbar-mobile .menu-toggle {
     background: none;
     border: none;
-    color: #ffffff;
+    color: var(--c-texto);
     font-size: 22px;
     line-height: 1;
     padding: 8px 12px;
   }
 
   .topbar-mobile .menu-toggle:hover {
-    background: var(--color-oscuro-suave);
+    background: var(--c-superficie-2);
   }
 
   .topbar-logo {
