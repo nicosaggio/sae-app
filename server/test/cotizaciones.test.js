@@ -734,3 +734,59 @@ test('PDF con muchos ítems: pasa a más páginas, repite el encabezado de la ta
   assert.ok(paginas[paginas.length - 1].includes('TOTAL') && paginas[paginas.length - 1].includes('$ 84.700,00'), '70 × 1.000 + IVA en la última página');
   assert.equal(paginas.slice(0, -1).some((t) => t.includes('CONDICIONES')), false, 'las condiciones van después de la tabla');
 });
+
+test('rechazo automático: al terminar el evento los pendientes quedan rechazados; confirmados, reabiertos y los de eventos en curso no se tocan', async () => {
+  const admin = db.prepare("SELECT id FROM usuarios WHERE nombre_usuario = 'admin1'").get().id;
+  const evento = (nombre, inicio, fin) =>
+    Number(db.prepare("INSERT INTO eventos (nombre, lugar, fecha_inicio, fecha_fin, creado_por) VALUES (?, 'Predio', ?, ?, ?)").run(nombre, inicio, fin, admin).lastInsertRowid);
+  const terminado = evento('EXPO TERMINADA', '2020-01-01', '2020-01-02');
+  const terminaHoy = evento('EXPO QUE TERMINA HOY', '2020-01-02', '2020-01-03');
+  const enCurso = evento('EXPO EN CURSO', '2020-01-03', '2020-01-05');
+  const estadoDe = (id) => db.prepare('SELECT estado, rechazada_por, rechazada_en FROM cotizaciones WHERE id = ?').get(id);
+  const hoy = '2020-01-03';
+
+  const pendiente = await nuevaCompleta({ evento_id: terminado, lote: '1' });
+  const otroPendiente = await nuevaCompleta({ evento_id: terminado, lote: '2' });
+  const sinEvento = (await api('oper1', 'POST', '', { tipo: 'SAE', lote: '3' })).cuerpo;
+  const delDiaQueTermina = await nuevaCompleta({ evento_id: terminaHoy, lote: '4' });
+  const delEventoEnCurso = await nuevaCompleta({ evento_id: enCurso, lote: '5' });
+  const yaRechazado = await nuevaCompleta({ evento_id: terminado, lote: '6' });
+  await api('oper1', 'POST', `/${yaRechazado.id}/rechazar`);
+  const confirmado = await nuevaCompleta({ evento_id: terminado, lote: '7' });
+  await api('oper1', 'POST', `/${confirmado.id}/lineas`, { catalogo_item_id: idDe('CE-100'), cantidad: 1 });
+  assert.equal((await api('oper1', 'POST', `/${confirmado.id}/confirmar`)).status, 200);
+
+  assert.equal(cot.rechazarDeEventosTerminados(hoy), 2, 'sólo los dos pendientes del evento que ya terminó');
+
+  for (const p of [pendiente, otroPendiente]) {
+    const fila = estadoDe(p.id);
+    assert.equal(fila.estado, 'rechazada');
+    assert.ok(fila.rechazada_en);
+    assert.equal(fila.rechazada_por, null, 'lo hizo el sistema, no una persona');
+  }
+  assert.equal(estadoDe(sinEvento.id).estado, 'pendiente', 'sin evento no hay fecha de fin');
+  assert.equal(estadoDe(delDiaQueTermina.id).estado, 'pendiente', 'el evento termina hoy: todavía no terminó');
+  assert.equal(estadoDe(delEventoEnCurso.id).estado, 'pendiente');
+  assert.equal(estadoDe(confirmado.id).estado, 'confirmada');
+  assert.ok(estadoDe(yaRechazado.id).rechazada_por, 'el rechazado a mano conserva quién lo rechazó');
+
+  // Queda como cualquier rechazado: de sólo lectura, y la pantalla avisa que fue automático
+  const visto = (await api('oper1', 'GET', `/${pendiente.id}`)).cuerpo;
+  assert.equal(visto.estado, 'rechazada');
+  assert.equal(visto.rechazada_por, null);
+  assert.equal((await api('oper1', 'PUT', `/${pendiente.id}`, { notas: 'no debería guardar' })).status, 409);
+
+  assert.equal(cot.rechazarDeEventosTerminados(hoy), 0, 'volver a correrlo no cambia nada');
+
+  // Al día siguiente, el que terminaba hoy ya cuenta como terminado
+  assert.equal(cot.rechazarDeEventosTerminados('2020-01-04'), 1);
+  assert.equal(estadoDe(delDiaQueTermina.id).estado, 'rechazada');
+  assert.equal(estadoDe(delEventoEnCurso.id).estado, 'pendiente');
+
+  // Si alguien lo reabre a propósito, el rechazo automático no lo vuelve a rechazar
+  assert.equal((await api('oper1', 'POST', `/${pendiente.id}/reabrir`)).status, 200);
+  assert.equal(cot.rechazarDeEventosTerminados('2020-01-10'), 1, 'el único que se rechaza es el del evento en curso, que ya terminó');
+  assert.equal(estadoDe(pendiente.id).estado, 'pendiente', 'reabierto a mano: se respeta');
+  assert.equal(estadoDe(otroPendiente.id).estado, 'rechazada');
+  assert.equal(estadoDe(delEventoEnCurso.id).estado, 'rechazada');
+});

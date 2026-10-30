@@ -540,7 +540,12 @@ export function CotizacionEditorPage() {
           {cot.evento_id && <Link to={`/eventos/${cot.evento_id}`}>Ver el evento</Link>}
         </div>
       )}
-      {rechazada && <div className="aviso advertencia">Este presupuesto está marcado como rechazado: queda como registro, de sólo lectura. Se puede reabrir con el botón de abajo.</div>}
+      {rechazada && (
+        <div className="aviso advertencia">
+          {cot.rechazada_por ? 'Este presupuesto está marcado como rechazado' : 'Este presupuesto se rechazó solo porque no se confirmó antes de que terminara el evento'}: queda como registro, de sólo lectura. Se puede
+          reabrir con el botón de abajo.
+        </div>
+      )}
       {opciones && !opciones.catalogo_cargado && !esNuevo && (
         <div className="aviso advertencia">El catálogo todavía no está cargado (falta la carga inicial), así que no se pueden agregar ítems.</div>
       )}

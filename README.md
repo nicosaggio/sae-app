@@ -351,6 +351,12 @@ Cada presupuesto tiene tres estados:
   borrarlo, así queda como registro (quién y cuándo lo rechazó). Queda de sólo lectura y se puede
   **reabrir** (vuelve a pendiente y editable) si el cliente cambia de opinión. Desde rechazado sí
   se puede eliminar del todo si hace falta.
+  - **Rechazo automático**: los presupuestos que siguen pendientes cuando el evento ya terminó (su
+    último día es anterior a hoy) se rechazan solos. Corre todos los días a las 8:00, hora del
+    servidor, y si ese día el servidor estaba apagado lo recupera al día siguiente. Los rechazados
+    así quedan igual que los de mano, pero sin "quién lo rechazó", y el editor avisa que fue
+    automático. Si uno se **reabre** a propósito, el rechazo automático no lo vuelve a rechazar.
+    Sólo se rechazan los pendientes que tienen evento: sin evento no hay fecha de fin.
 
 La ventana **Presupuestos** tiene el filtro **Confirmación: Confirmados / No confirmados /
 Rechazados / Todos**. Por defecto muestra "Confirmados", igual que antes.

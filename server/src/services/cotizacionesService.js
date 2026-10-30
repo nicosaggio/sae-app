@@ -317,13 +317,30 @@ function rechazar(id, usuario) {
   });
 }
 
+/**
+ * Rechaza los presupuestos que siguen pendientes cuando el evento ya terminó (su último día es anterior
+ * a `hoy`). Quedan como los rechazados a mano, pero sin `rechazada_por` (lo hizo el sistema). Los que
+ * alguien reabrió a propósito no se vuelven a rechazar. Devuelve cuántos rechazó.
+ */
+function rechazarDeEventosTerminados(hoy = hoyIso()) {
+  const info = db
+    .prepare(
+      `UPDATE cotizaciones
+       SET estado = 'rechazada', rechazada_por = NULL, rechazada_en = datetime('now'), actualizado_en = datetime('now')
+       WHERE estado = 'pendiente' AND reabierta_en IS NULL
+         AND evento_id IN (SELECT id FROM eventos WHERE fecha_fin < ?)`
+    )
+    .run(hoy);
+  return Number(info.changes);
+}
+
 /** Vuelve un presupuesto rechazado a pendiente, por si el cliente cambia de opinión. */
 function reabrir(id) {
   return transaction(() => {
     const fila = leerFila(id);
     if (fila.estado !== 'rechazada') throw errorHttp(409, 'Sólo se puede reabrir un presupuesto rechazado.');
     db.prepare(
-      `UPDATE cotizaciones SET estado = 'pendiente', rechazada_por = NULL, rechazada_en = NULL, actualizado_en = datetime('now') WHERE id = ?`
+      `UPDATE cotizaciones SET estado = 'pendiente', rechazada_por = NULL, rechazada_en = NULL, reabierta_en = datetime('now'), actualizado_en = datetime('now') WHERE id = ?`
     ).run(id);
     return obtener(id);
   });
@@ -611,6 +628,7 @@ module.exports = {
   actualizar,
   eliminar,
   rechazar,
+  rechazarDeEventosTerminados,
   reabrir,
   duplicar,
   buscarCatalogo,

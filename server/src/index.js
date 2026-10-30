@@ -2,11 +2,13 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const cron = require('node-cron');
 const { createApp } = require('./app');
 const { run: migrate } = require('./db/migrate');
 const { run: seed } = require('./db/seed');
 const backupService = require('./services/backupService');
 const clientesService = require('./services/clientesService');
+const cotizacionesService = require('./services/cotizacionesService');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
@@ -40,6 +42,19 @@ try {
   console.error('No se pudieron completar los clientes:', err.message);
 }
 backupService.iniciarProgramacion();
+
+// Los presupuestos que quedaron sin confirmar se rechazan solos cuando termina el evento: todos los días
+// a las 8:00, hora del servidor. Si ese día el servidor estaba apagado, lo recupera al día siguiente.
+function rechazarPendientesVencidos() {
+  try {
+    const rechazados = cotizacionesService.rechazarDeEventosTerminados();
+    if (rechazados > 0) console.log(`Presupuestos sin confirmar rechazados por haber terminado su evento: ${rechazados}`);
+  } catch (err) {
+    console.error('No se pudieron rechazar los presupuestos de eventos terminados:', err.message);
+  }
+}
+cron.schedule('0 8 * * *', rechazarPendientesVencidos);
+console.log('Rechazo automático de presupuestos sin confirmar programado (diario 08:00).');
 
 const app = createApp();
 
