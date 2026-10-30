@@ -366,8 +366,23 @@ Cada presupuesto tiene tres estados:
     automático. Si uno se **reabre** a propósito, el rechazo automático no lo vuelve a rechazar.
     Sólo se rechazan los pendientes que tienen evento: sin evento no hay fecha de fin.
 
-La ventana **Presupuestos** tiene el filtro **Confirmación: Confirmados / No confirmados /
-Rechazados / Todos**. Por defecto muestra "Confirmados", igual que antes.
+La ventana **Presupuestos** tiene un control **Confirmados / No confirmados / Rechazados / Todos**
+que muestra cuántos presupuestos hay en cada lista con los filtros puestos. Por defecto muestra
+"Confirmados", igual que antes. Debajo están los filtros (evento, lote, nombre de stand, mail del
+cliente, estado de cobro y fechas del evento); los que están aplicados aparecen como **fichas** que se
+quitan de a una con la ✕, o todos juntos con "Limpiar filtros". Las tres listas comparten columnas: en
+los confirmados la última es el **estado de cobro** (un punto: vacío, azul, a medias o lleno) y en los
+pendientes y rechazados es el **estado de confirmación** (un sello; los que se rechazaron solos llevan
+la etiqueta "Automático"). Un cancelado sale con el lote tachado. Con el teclado se llega a cada fila y
+Enter la abre. Filtrar por estado de cobro deja afuera a los pendientes y rechazados (no tienen), y la
+pantalla lo avisa.
+
+Al abrir un presupuesto **confirmado** se abre un **panel a la derecha** (la lista queda atrás, con sus
+filtros): arriba el número de lote, con el botón "Cambiar n.º de lote"; después los datos del
+presupuesto, que se guardan solos al salir de cada campo ("Guardado ✓"), y los productos, que se
+agregan, se editan en su propia fila y se quitan. Quitar un producto y borrar el presupuesto piden
+confirmación en una ventana de la app. Un usuario "solo estado" ve todo y sólo puede cambiar el estado
+de cobro. El mismo contenido aparece, dentro de cada lote, en la pantalla del evento.
 
 El campo **Nombre de stand** busca en las tres listas por el nombre que se ve en la columna Lote
 (después del número de lote). No distingue mayúsculas ni tildes: "cafe" encuentra "Café". Se combina con

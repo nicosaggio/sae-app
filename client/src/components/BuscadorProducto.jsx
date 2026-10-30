@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useListaTeclado } from '../hooks/useListaTeclado';
 
 /** Input de texto con autocompletado para elegir un producto por nombre o código. */
-export function BuscadorProducto({ productos, value, onChange, placeholder = 'Buscar producto…' }) {
+export function BuscadorProducto({ productos, value, onChange, placeholder = 'Buscar producto…', id }) {
   const [query, setQuery] = useState('');
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
@@ -54,7 +54,7 @@ export function BuscadorProducto({ productos, value, onChange, placeholder = 'Bu
 
   return (
     <div ref={contenedorRef} className="buscador-producto">
-      <input placeholder={placeholder} value={texto} onChange={onInputChange} onFocus={() => setAbierto(true)} onKeyDown={lista.onKeyDown} />
+      <input id={id} placeholder={placeholder} value={texto} onChange={onInputChange} onFocus={() => setAbierto(true)} onKeyDown={lista.onKeyDown} />
       {abierto && coincidencias.length > 0 && (
         <div className="buscador-dropdown" {...lista.propsLista}>
           {coincidencias.map((p, i) => (

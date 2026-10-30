@@ -81,6 +81,8 @@ const TRAZOS = {
     </>
   ),
   list: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />,
+  'chev-r': <path d="m9 5 7 7-7 7" />,
+  filter: <path d="M3 5h18l-7 8.5V20l-4-2v-4.5z" />,
 };
 
 /** Ícono decorativo: el texto del botón o del aviso es el que lee el lector de pantalla. */
