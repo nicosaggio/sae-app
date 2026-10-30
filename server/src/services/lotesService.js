@@ -1,6 +1,7 @@
 const { db } = require('../db/connection');
 
 function crear({ eventoId, codigo, expositor, contacto }) {
+  exigirCodigoLibre({ evento_id: eventoId, id: 0 }, codigo);
   const info = db
     .prepare('INSERT INTO lotes (evento_id, codigo, expositor, contacto) VALUES (?, ?, ?, ?)')
     .run(eventoId, codigo, expositor || null, contacto || null);
