@@ -89,7 +89,8 @@ router.post('/presupuestos/:id/lineas', bloquearSiSoloEstado, (req, res) => {
     productoId: Number(producto_id),
     cantidad: Number(cantidad),
     comentario: comentario || null,
-    precio_unitario: precio_unitario === undefined || precio_unitario === '' ? null : Number(precio_unitario),
+    // Sin precio (ausente, null o vacío) es "sin precio": Number(null) daría 0 y, si el producto ya estaba, le pisaría el precio
+    precio_unitario: precio_unitario === undefined || precio_unitario === null || precio_unitario === '' ? null : Number(precio_unitario),
   });
   res.status(201).json(resultado);
 });
