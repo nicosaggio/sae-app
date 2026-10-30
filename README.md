@@ -571,6 +571,36 @@ filtro de evento, porque cada evento pertenece a un año y un mes.
   cuando los estados estén completos.
 - Los presupuestos **cancelados** no cuentan (ver sección 9).
 
+### 9.8) Cómo se ve la aplicación
+
+La aplicación usa un diseño propio ("Taller y plano"): fondo cálido, barra lateral clara y un violeta
+más profundo que el del logo para botones y enlaces (el lila del logo no llega al contraste que
+necesita el texto sobre fondo claro; queda sólo en el logo). Los colores, tamaños y espacios están en
+`client/src/tokens.css` y los componentes (botones, campos, tarjetas, tablas, avisos, ventanas, panel
+lateral, calendario, regla de fases) en `client/src/componentes.css`. Las pantallas ya pasadas al
+diseño nuevo cuelgan de una clase `.ed`, así las que todavía no se migraron no se alteran: Login,
+Inicio, Calendario, Evento, Presupuestos (y su panel), editor de presupuesto, Clientes, Totales, Alertas
+y Usuarios. **Productos**, **Catálogo** y el **editor de croquis** siguen con su diseño anterior (con la
+paleta nueva).
+
+Cosas que se ven distintas respecto del diseño anterior:
+
+- **Preguntas antes de borrar o cambiar algo** (borrar un cliente o un lote, desactivar un usuario, unificar
+  eventos, quitar un adjunto…) son ventanas de la propia aplicación que dicen qué pasa, en lugar del
+  cuadro del navegador. Las acciones que salieron bien avisan un momento abajo ("Cliente guardado").
+- **Calendario**: cada evento es una barra que cruza los días, con el armado (rayado) y el desarme
+  (punteado) antes y después, una marca **D** si el desarme es el último día, un círculo **$** si tiene una
+  alerta de pago, y el día de hoy resaltado. En el celular las barras no llevan texto y el detalle va en
+  la lista "Eventos del mes" de abajo. **Nuevo evento** se abre en un panel a la derecha y no deja crear
+  uno con el fin antes del inicio.
+- **Inicio** muestra las alertas de pago (con cuánto falta o cuánto lleva vencido) y los próximos eventos
+  con su regla de fases en chico; **Alertas** es la lista completa.
+- **Usuarios** (sólo administradores; los demás ven un aviso): crear, editar y cambiar la contraseña van
+  en ventanas, y se puede desactivar a cualquiera menos a uno mismo.
+- **Clientes**: tocar una fila abre el cliente; el CUIT repetido se avisa dentro de la ventana.
+- **Iniciar sesión**: si se equivoca el usuario o la clave lo dice con claridad, y si la computadora quedó
+  bloqueada por demasiados intentos lo avisa con el tiempo que falta.
+
 ---
 
 ## 10) Croquis del stand
