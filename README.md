@@ -408,9 +408,18 @@ cancelados, tampoco se imprime su croquis.
    numeración "Página x de y". Vence a los 4 días de la fecha de carga.
 6. **Confirmar**, cuando el cliente acepta.
 
-También se puede **duplicar** un presupuesto en cualquier estado (copia los datos, los ítems y
-los adjuntos), **marcar como rechazado** uno pendiente, **reabrir** uno rechazado, y **eliminar**
-uno pendiente o rechazado (uno confirmado no, porque ya es parte del evento). El duplicado toma
+La pantalla del presupuesto tiene a la derecha un **resumen fijo** (que no se pierde al bajar por la
+página) con los totales y la lista **"Para confirmar"**: cada requisito aparece tildado o con una
+cruz que dice qué falta, y el botón "Confirmar presupuesto" se habilita cuando están todos y los
+datos están guardados. Arriba, cuatro **pasos** (Datos, Ítems, Croquis y adjuntos —opcional—,
+Confirmar) marcan cuál toca ahora y llevan a su sección al hacer clic. Las acciones de siempre
+("Ver PDF" y "Descargar PDF") están a la vista; las demás están en el menú **⋯**. Las preguntas
+antes de confirmar, rechazar, eliminar, quitar un adjunto o cambiar la lista de precios (si hay
+precios corregidos a mano) son ventanas de la propia app, que explican qué pasa.
+
+Desde el menú **⋯** se puede **duplicar** un presupuesto en cualquier estado (copia los datos, los
+ítems y los adjuntos), **marcar como rechazado** uno pendiente, **reabrir** uno rechazado, y
+**eliminar** uno pendiente o rechazado (uno confirmado no, porque ya es parte del evento). El duplicado toma
 **el siguiente número de presupuesto del mismo cliente** (si el original es `AE15ST1-1`, la copia
 es `AE15ST1-2`). Para eso conserva al responsable del original, porque el ID de cliente incluye la
 última letra del responsable; de todos modos queda registrado quién lo duplicó.
@@ -426,7 +435,8 @@ correlativo por cliente y el **código de facturación** es el ID más el númer
 ### 9.3) Qué pasa al confirmar
 
 Hacen falta el evento, el número de stand (lote), al menos un ítem y que todos tengan precio; si
-falta algo, la pantalla dice qué. Al confirmar:
+falta algo, la lista "Para confirmar" dice qué (la arma el servidor, con la misma regla con la que
+confirma: `confirmable.requisitos`). Al confirmar:
 - Se busca o crea el lote del evento (con el número y el nombre del stand).
 - Se crea el presupuesto del evento, marcado con origen **App**, en estado "Pendiente de
   facturar", con el total con IVA como monto, y sus ítems con el precio unitario (sin IVA), igual

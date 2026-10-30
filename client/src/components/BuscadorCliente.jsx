@@ -6,7 +6,7 @@ import { useListaTeclado } from '../hooks/useListaTeclado';
  * Campo de razón social con autocompletado: al escribir sugiere clientes ya guardados (por razón social,
  * contacto o CUIT). Al elegir uno, avisa con `onElegir` para que el formulario complete sus datos.
  */
-export function BuscadorCliente({ value, onChange, onElegir, disabled = false }) {
+export function BuscadorCliente({ value, onChange, onElegir, disabled = false, id }) {
   const [abierto, setAbierto] = useState(false);
   const [resultados, setResultados] = useState([]);
   const contenedorRef = useRef(null);
@@ -50,9 +50,10 @@ export function BuscadorCliente({ value, onChange, onElegir, disabled = false })
   return (
     <div ref={contenedorRef} className="buscador-producto">
       <input
+        id={id}
         value={value}
         disabled={disabled}
-        placeholder="Escribí para buscar un cliente guardado…"
+        placeholder={disabled ? '' : 'Escribí para buscar un cliente guardado…'}
         onChange={(e) => {
           onChange(e.target.value);
           setAbierto(true);
