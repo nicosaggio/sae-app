@@ -12,7 +12,8 @@ const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]):not([
  *
  * Props: titulo, subtitulo (opcional), children (el cuerpo), textoConfirmar, textoCancelar, peligro, ancho (px),
  * foco ('cancelar' | 'confirmar' | 'primero'), confirmarDeshabilitado, formulario (el cuerpo es un <form>: Enter en
- * el último campo lleva al botón y un segundo Enter confirma), onConfirmar, onCancelar.
+ * el último campo lleva al botón y un segundo Enter confirma), pieIzquierda (una acción aparte, a la izquierda del
+ * pie: por ejemplo "Borrar"), soloCerrar (ventana de sólo lectura: un único botón para cerrar), onConfirmar, onCancelar.
  */
 export function DialogoConfirmar({
   titulo,
@@ -25,6 +26,8 @@ export function DialogoConfirmar({
   foco,
   confirmarDeshabilitado = false,
   formulario = false,
+  pieIzquierda,
+  soloCerrar = false,
   onConfirmar,
   onCancelar,
 }) {
@@ -37,7 +40,7 @@ export function DialogoConfirmar({
   useEffect(() => {
     alCancelarRef.current = onCancelar;
   });
-  const focoInicial = foco || (peligro ? 'cancelar' : 'confirmar');
+  const focoInicial = soloCerrar ? 'cancelar' : foco || (peligro ? 'cancelar' : 'confirmar');
 
   useEffect(() => {
     const anterior = document.activeElement;
@@ -95,18 +98,21 @@ export function DialogoConfirmar({
         </div>
         <div className="dialogo-cuerpo">{children}</div>
         <div className="dialogo-pie">
-          <button type="button" className="boton" ref={cancelarRef} onClick={onCancelar}>
-            {textoCancelar}
+          {pieIzquierda && <div style={{ marginRight: 'auto' }}>{pieIzquierda}</div>}
+          <button type="button" className={`boton${soloCerrar ? ' boton--primario' : ''}`} ref={cancelarRef} onClick={onCancelar}>
+            {soloCerrar ? 'Cerrar' : textoCancelar}
           </button>
-          <button
-            type={formulario ? 'submit' : 'button'}
-            className={`boton ${peligro ? 'boton--peligro' : 'boton--primario'}`}
-            ref={confirmarRef}
-            disabled={confirmarDeshabilitado}
-            onClick={formulario ? undefined : onConfirmar}
-          >
-            {textoConfirmar}
-          </button>
+          {!soloCerrar && (
+            <button
+              type={formulario ? 'submit' : 'button'}
+              className={`boton ${peligro ? 'boton--peligro' : 'boton--primario'}`}
+              ref={confirmarRef}
+              disabled={confirmarDeshabilitado}
+              onClick={formulario ? undefined : onConfirmar}
+            >
+              {textoConfirmar}
+            </button>
+          )}
         </div>
       </Raiz>
     </div>

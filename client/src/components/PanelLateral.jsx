@@ -9,9 +9,10 @@ const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]):not([
  * foco se queda adentro, y al cerrarlo vuelve a lo que lo abrió.
  *
  * Props: titulo (el nombre del panel para los lectores de pantalla), cabecera (lo que va a la izquierda del
- * encabezado), children (el cuerpo, con scroll), pie (opcional), onClose. Las preguntas (DialogoConfirmar) pueden abrirse adentro: ellas atienden primero su Escape y su Tab.
+ * encabezado), children (el cuerpo, con scroll), pie (opcional), ancho (px, opcional), onSubmit (opcional: el panel
+ * entero es un formulario, así Enter en el último campo lleva al botón del pie), onClose. Las preguntas (DialogoConfirmar) pueden abrirse adentro: ellas atienden primero su Escape y su Tab.
  */
-export function PanelLateral({ titulo, cabecera, children, pie, onClose }) {
+export function PanelLateral({ titulo, cabecera, children, pie, ancho, onSubmit, onClose }) {
   const panelRef = useRef(null);
   const alCerrarRef = useRef(onClose);
   useEffect(() => {
@@ -22,7 +23,8 @@ export function PanelLateral({ titulo, cabecera, children, pie, onClose }) {
     const anterior = document.activeElement;
     const overflowAnterior = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
+    // Si algo de adentro ya pidió el foco (un campo con autoFocus) se respeta
+    if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
     function onKeyDown(e) {
       if (e.key === 'Escape') alCerrarRef.current();
     }
@@ -49,9 +51,11 @@ export function PanelLateral({ titulo, cabecera, children, pie, onClose }) {
     }
   }
 
+  const Raiz = onSubmit ? 'form' : 'aside';
+
   return (
     <div className="panel-velo" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="panel" ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={titulo} onKeyDown={onKeyDownPanel}>
+      <Raiz className="panel" ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={titulo} style={ancho ? { width: `min(${ancho}px, 100vw)` } : undefined} onKeyDown={onKeyDownPanel} {...(onSubmit ? { onSubmit, noValidate: true } : {})}>
         <div className="panel-cab">
           <div style={{ minWidth: 0 }}>{cabecera}</div>
           <button type="button" className="boton boton--icono boton--suave" onClick={onClose} aria-label="Cerrar">
@@ -60,7 +64,7 @@ export function PanelLateral({ titulo, cabecera, children, pie, onClose }) {
         </div>
         <div className="panel-cuerpo">{children}</div>
         {pie && <div className="panel-pie">{pie}</div>}
-      </aside>
+      </Raiz>
     </div>
   );
 }

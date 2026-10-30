@@ -31,3 +31,17 @@ export function cuandoEs(inicio, fin, hoy = hoyIso()) {
   if (desdeFin <= 0) return 'En curso';
   return desdeFin === 1 ? 'Terminó ayer' : `Terminó hace ${desdeFin} días`;
 }
+
+/** Cuándo empieza el evento de una alerta de pago, dicho en días y con el color de lo urgente (ya empezó o empieza hoy = rojo). */
+export function cuandoAlerta(inicio, hoy = hoyIso()) {
+  const dias = diasEntre(hoy, inicio);
+  if (dias < 0) return { texto: `Vencido hace ${-dias} ${dias === -1 ? 'día' : 'días'}`, clase: 'etiqueta--peligro' };
+  if (dias === 0) return { texto: 'Empieza hoy', clase: 'etiqueta--peligro' };
+  return { texto: `Empieza en ${dias} ${dias === 1 ? 'día' : 'días'}`, clase: 'etiqueta--aviso' };
+}
+
+/** "Viernes 30 de octubre de 2026" */
+export function fechaLarga(iso = hoyIso()) {
+  const texto = new Date(`${iso}T12:00:00`).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(',', '');
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
