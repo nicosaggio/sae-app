@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -6,11 +6,9 @@ import { usePolling } from '../hooks/usePolling';
 import { ESTADOS_PRESUPUESTO, etiquetaEstadoPresupuesto } from '../constants';
 import { fechaCorta, pesos } from '../catalogoFormat';
 import { BuscadorEvento } from '../components/BuscadorEvento';
-import { CambiarLote } from '../components/CambiarLote';
 import { EstadoCobro } from '../components/EstadoCobro';
 import { Icono } from '../components/Icono';
-import { PanelLateral } from '../components/PanelLateral';
-import { PresupuestoPanel } from '../components/PresupuestoPanel';
+import { PresupuestoPanelLateral } from '../components/PresupuestoPanelLateral';
 import { Sello } from '../components/Sello';
 
 const CONFIRMACION = [
@@ -201,25 +199,11 @@ export function PresupuestosPage() {
   const [mail, setMail] = useState('');
   const [productos, setProductos] = useState([]);
   const [presupuestoAbiertoId, setPresupuestoAbiertoId] = useState(null);
-  const [presupuestoAbierto, setPresupuestoAbierto] = useState(null);
-  const [cotizacionOrigen, setCotizacionOrigen] = useState(null);
   const idf = useId();
 
   const verConfirmados = confirmacion === 'confirmados' || confirmacion === 'todos';
   const verPendientes = confirmacion === 'no_confirmados' || confirmacion === 'todos';
   const verRechazados = confirmacion === 'rechazados' || confirmacion === 'todos';
-
-  // Un presupuesto que se cargó desde la app enlaza a su versión original (PDF y adjuntos)
-  useEffect(() => {
-    if (presupuestoAbierto?.origen !== 'app') {
-      setCotizacionOrigen(null);
-      return;
-    }
-    api
-      .get(`/cotizaciones?presupuestoId=${presupuestoAbierto.id}`)
-      .then((lista) => setCotizacionOrigen(lista[0] || null))
-      .catch(() => setCotizacionOrigen(null));
-  }, [presupuestoAbierto?.id, presupuestoAbierto?.origen]);
 
   useEffect(() => {
     api
@@ -276,37 +260,8 @@ export function PresupuestosPage() {
   const rechazados = filtrarSinEstado(rechazadosTodos);
   const confirmados = (presupuestos || []).filter((p) => coincideStand(p.lote_expositor) && coincideMail(p.cliente_contacto, p.cotizacion_mail));
 
-  function cargarPresupuestoAbierto(id) {
-    api
-      .get(`/presupuestos/${id}`)
-      .then(setPresupuestoAbierto)
-      .catch((err) => {
-        // Si lo acaban de borrar desde el propio panel (err.status 404), no queda nada
-        // que mostrar — se cierra en vez de dejar el panel trabado en "Cargando…".
-        if (err.status === 404) {
-          cerrarPresupuesto();
-          recargar();
-        } else {
-          setPresupuestoAbierto(null);
-        }
-      });
-  }
-
-  function abrirPresupuesto(id) {
-    setPresupuestoAbiertoId(id);
-    setPresupuestoAbierto(null);
-    cargarPresupuestoAbierto(id);
-  }
-
-  function cerrarPresupuesto() {
-    setPresupuestoAbiertoId(null);
-    setPresupuestoAbierto(null);
-  }
-
-  function alCambiarPresupuesto() {
-    cargarPresupuestoAbierto(presupuestoAbiertoId);
-    recargar();
-  }
+  const abrirPresupuesto = (id) => setPresupuestoAbiertoId(id);
+  const cerrarPresupuesto = useCallback(() => setPresupuestoAbiertoId(null), []);
 
   // Filtros aplicados: cada uno con la forma de quitarlo
   const nombreEvento = eventos.find((e) => e.id === eventoId)?.nombre || 'elegido';
@@ -342,7 +297,6 @@ export function PresupuestosPage() {
   const hayError = Boolean((presupuestos === null && errorConfirmados) || (pendientesTodos === null && errorPendientes) || (rechazadosTodos === null && errorRechazados));
   const cuenta = (n, cargando) => (cargando ? '' : n);
   const filaAbierta = (presupuestos || []).find((p) => p.id === presupuestoAbiertoId);
-  const baseAbierta = presupuestoAbierto || filaAbierta; // el encabezado del panel sale de la fila de la lista hasta que llega el detalle
   const mostrarTitulos = confirmacion === 'todos';
 
   return (
@@ -502,53 +456,7 @@ export function PresupuestosPage() {
       </div>
 
       {presupuestoAbiertoId && (
-        <PanelLateral
-          titulo="Presupuesto confirmado"
-          onClose={cerrarPresupuesto}
-          cabecera={
-            <>
-              <div className="fila" style={{ gap: 'var(--s-2)', marginBottom: 6 }}>
-                <Sello estado="confirmada" />
-                <span className="sub">{filaAbierta?.cod_fac ? `Cód. de facturación ${filaAbierta.cod_fac}` : 'Sin código de facturación'}</span>
-              </div>
-              {baseAbierta && (
-                <h2>
-                  {baseAbierta.evento_nombre} · Lote {baseAbierta.lote_codigo}
-                  {baseAbierta.lote_expositor ? ` — ${baseAbierta.lote_expositor}` : ''}
-                </h2>
-              )}
-            </>
-          }
-          pie={
-            <>
-              <span className="ayuda">Los cambios se guardan solos.</span>
-              <button type="button" className="boton boton--primario" onClick={cerrarPresupuesto}>
-                Listo
-              </button>
-            </>
-          }
-        >
-          {!presupuestoAbierto ? (
-            <div className="pila" aria-busy="true" aria-label="Cargando">
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="esqueleto" />
-              ))}
-            </div>
-          ) : (
-            <>
-              {cotizacionOrigen && (
-                <div className="aviso aviso--info">
-                  <Icono nombre="info" />
-                  <div className="aviso-cuerpo">
-                    Presupuesto cargado desde la app. <Link to={`/presupuestos/carga/${cotizacionOrigen.id}`}>Ver el presupuesto original (PDF y adjuntos)</Link>
-                  </div>
-                </div>
-              )}
-              <CambiarLote presupuesto={presupuestoAbierto} onCambiado={alCambiarPresupuesto} />
-              <PresupuestoPanel key={presupuestoAbierto.id} presupuesto={presupuestoAbierto} productos={productos} onCambiado={alCambiarPresupuesto} onGuardado={recargar} />
-            </>
-          )}
-        </PanelLateral>
+        <PresupuestoPanelLateral presupuestoId={presupuestoAbiertoId} resumen={filaAbierta} productos={productos} onClose={cerrarPresupuesto} onCambiado={recargar} onGuardado={recargar} />
       )}
     </div>
   );
