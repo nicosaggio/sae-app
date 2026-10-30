@@ -157,15 +157,19 @@ function leerFila(id) {
   return fila;
 }
 
-/** Motivos por los que todavía no se puede confirmar (lista vacía = se puede). */
-function motivosNoConfirmable(fila, lineas) {
-  const motivos = [];
-  if (!fila.evento_id) motivos.push('Falta elegir el evento (EXPO)');
-  if (!fila.lote) motivos.push('Falta el número de stand (LOTE)');
-  if (lineas.length === 0) motivos.push('El presupuesto no tiene ítems');
+/**
+ * Lo que hace falta para confirmar, punto por punto: `clave` lo identifica, `texto` dice qué se pide y
+ * `motivo`, qué falta cuando no se cumple (null si "texto" ya lo dice todo).
+ */
+function requisitosDeConfirmacion(fila, lineas) {
   const sinPrecio = lineas.filter((l) => l.precio_unitario === null).map((l) => l.codigo);
-  if (sinPrecio.length > 0) motivos.push(`Faltan precios en: ${sinPrecio.join(', ')}`);
-  return motivos;
+  return [
+    { clave: 'evento', ok: Boolean(fila.evento_id), texto: 'Evento (expo) elegido', motivo: 'Falta elegir el evento (EXPO)' },
+    { clave: 'lote', ok: Boolean(fila.lote), texto: 'Número de stand (lote) cargado', motivo: 'Falta el número de stand (LOTE)' },
+    { clave: 'items', ok: lineas.length > 0, texto: 'Al menos un ítem', motivo: 'El presupuesto no tiene ítems' },
+    // sin ítems no hay precios que mirar: ya lo dice el punto anterior
+    { clave: 'precios', ok: lineas.length > 0 && sinPrecio.length === 0, texto: 'Todos los ítems con precio', motivo: sinPrecio.length > 0 ? `Faltan precios en: ${sinPrecio.join(', ')}` : null },
+  ];
 }
 
 function obtener(id) {
@@ -179,7 +183,8 @@ function obtener(id) {
       precio_modificado: l.precio_unitario !== null && l.precio_catalogo !== null && l.precio_unitario !== l.precio_catalogo,
     }));
   const presupuesto = fila.presupuesto_id ? db.prepare('SELECT id, lote_id, estado FROM presupuestos WHERE id = ?').get(fila.presupuesto_id) : null;
-  const motivos = fila.estado === 'pendiente' ? motivosNoConfirmable(fila, lineas) : [];
+  const requisitos = fila.estado === 'pendiente' ? requisitosDeConfirmacion(fila, lineas) : [];
+  const motivos = requisitos.filter((r) => !r.ok && r.motivo).map((r) => r.motivo);
   return {
     ...fila,
     cod_fac: codigoDeFacturacion(fila),
@@ -191,7 +196,7 @@ function obtener(id) {
     croquis: croquisService.resumenDeCotizacion(id),
     totales: calcularTotales(lineas, fila.iva_porcentaje, fila.descuento_porcentaje),
     presupuesto: presupuesto ? { ...presupuesto } : null,
-    confirmable: { ok: motivos.length === 0, motivos },
+    confirmable: { ok: motivos.length === 0, motivos, requisitos },
   };
 }
 

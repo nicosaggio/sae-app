@@ -324,6 +324,34 @@ test('ítems: validaciones (cantidad entera desde 1, ítem existente, precio num
   assert.equal(conPrecio.confirmable.motivos.some((m) => /precios/.test(m)), false);
 });
 
+test('confirmable.requisitos: un punto por cada cosa que se pide y coincide con "ok" y "motivos"', async () => {
+  const textos = (c) => c.confirmable.requisitos.map((r) => [r.clave, r.ok, r.texto]);
+
+  // Vacío: nada se cumple; sin ítems no hay precios que reclamar
+  const vacio = (await api('oper1', 'POST', '', {})).cuerpo;
+  assert.deepEqual(textos(vacio), [
+    ['evento', false, 'Evento (expo) elegido'],
+    ['lote', false, 'Número de stand (lote) cargado'],
+    ['items', false, 'Al menos un ítem'],
+    ['precios', false, 'Todos los ítems con precio'],
+  ]);
+  assert.deepEqual(vacio.confirmable.requisitos.map((r) => r.motivo), ['Falta elegir el evento (EXPO)', 'Falta el número de stand (LOTE)', 'El presupuesto no tiene ítems', null]);
+  assert.equal(vacio.confirmable.motivos.length, 3, 'el motivo nulo no se cuenta');
+
+  // Con un ítem sin precio falta justo ese punto, y dice cuál es el ítem
+  const p = await nuevaCompleta();
+  const conSin = (await api('oper1', 'POST', `/${p.id}/lineas`, { catalogo_item_id: idDe('SIN'), cantidad: 1 })).cuerpo;
+  assert.deepEqual(conSin.confirmable.requisitos.map((r) => r.ok), [true, true, true, false]);
+  assert.equal(conSin.confirmable.requisitos[3].motivo, 'Faltan precios en: SIN');
+  assert.equal(conSin.confirmable.ok, false);
+
+  // Con todo cumplido, "ok" es verdadero y ya no queda ningún motivo
+  const linea = conSin.lineas[0];
+  const listo = (await llamar('oper1', 'PUT', `/cotizaciones/lineas/${linea.id}`, { precio_unitario: 500 })).cuerpo;
+  assert.equal(listo.confirmable.requisitos.every((r) => r.ok), true);
+  assert.deepEqual([listo.confirmable.ok, listo.confirmable.motivos], [true, []]);
+});
+
 test('lista de precios: al cambiarla se recalculan los ítems con la lista elegida y se pisa lo editado a mano', async () => {
   const feria = (await llamar('admin1', 'POST', '/catalogo/versiones', { nombre: 'Feria 55', porcentaje_global: 0.55 })).cuerpo;
   const p = await nuevaCompleta();
@@ -563,6 +591,7 @@ test('rechazar: lo marca de sólo lectura sin borrarlo; reabrir lo vuelve a pend
   assert.equal(r.status, 200);
   assert.equal(r.cuerpo.estado, 'rechazada');
   assert.ok(r.cuerpo.rechazada_en);
+  assert.deepEqual(r.cuerpo.confirmable.requisitos, [], 'si ya no está pendiente no se le pide nada para confirmar');
   const fila = db.prepare('SELECT estado, rechazada_por, rechazada_en FROM cotizaciones WHERE id = ?').get(p.id);
   assert.equal(fila.estado, 'rechazada');
   assert.ok(fila.rechazada_por, 'queda registrado quién lo rechazó');
