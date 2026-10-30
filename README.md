@@ -346,7 +346,15 @@ Cada presupuesto tiene tres estados:
   pendientes (un clic abre el presupuesto), pero el presupuesto es invisible para el resto: no
   entra en los totales, las alertas ni el export del evento.
 - **Confirmado**: cuando el cliente acepta, se confirma con un botón y pasa a formar parte del
-  evento. Desde ahí es un presupuesto más y funciona con todo lo que ya existía.
+  evento. Desde ahí es un presupuesto más y funciona con todo lo que ya existía. Si la organización
+  del evento cambia el número de un lote, se corrige desde la lista de **Presupuestos**: se abre el
+  presupuesto confirmado y se usa **Cambiar n.º de lote** (también se puede con **Editar lote** en la
+  pantalla del evento). El número es del lote (el stand), así que vale para todos sus presupuestos;
+  pasa también a los cargados desde la app (el "N.º de stand" del presupuesto original y su PDF) y
+  se recalcula su **código de facturación**, que lleva los últimos dígitos del lote. El número de
+  presupuesto se conserva (sólo cambia si otro presupuesto ya usa ese mismo código con ese número).
+  Si otro lote del evento ya tiene ese número, avisa y no cambia nada. Cambiar sólo el expositor o
+  el contacto del lote no toca ningún código.
 - **Rechazado**: cuando el cliente no lo acepta, se marca como rechazado con un botón en vez de
   borrarlo, así queda como registro (quién y cuándo lo rechazó). Queda de sólo lectura y se puede
   **reabrir** (vuelve a pendiente y editable) si el cliente cambia de opinión. Desde rechazado sí

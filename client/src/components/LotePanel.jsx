@@ -65,6 +65,11 @@ export function LotePanel({ lote, eventoId, productos, onCambiado }) {
             Guardar
           </button>
           <button onClick={() => setEditando(false)}>Cancelar</button>
+          {editado.codigo.trim() !== lote.codigo && (
+            <p className="texto-suave" style={{ flexBasis: '100%', margin: 0 }}>
+              Al guardar, el número nuevo también pasa a los presupuestos de este lote cargados desde la app, y se recalcula su código de facturación.
+            </p>
+          )}
         </div>
       ) : (
         <div className="toolbar" style={{ justifyContent: 'space-between' }}>

@@ -81,6 +81,74 @@ function TablaCotizaciones({ lista, cargando, mensajeVacio, badgeClase, badgeTex
   );
 }
 
+/**
+ * Cambia el número del lote de un presupuesto confirmado (la organización del evento a veces renumera los
+ * stands). El número es del lote: el cambio vale para todos los presupuestos de ese stand.
+ */
+function CambiarLote({ presupuesto, onCambiado }) {
+  const { puedeEscribir } = useAuth();
+  const [editando, setEditando] = useState(false);
+  const [codigo, setCodigo] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!puedeEscribir) return null;
+
+  function empezar() {
+    setCodigo(presupuesto.lote_codigo);
+    setError('');
+    setEditando(true);
+  }
+
+  async function guardar() {
+    if (codigo.trim() === presupuesto.lote_codigo) {
+      setEditando(false);
+      return;
+    }
+    setGuardando(true);
+    setError('');
+    try {
+      await api.put(`/lotes/${presupuesto.lote_id}/codigo`, { codigo });
+      setEditando(false);
+      onCambiado();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  if (!editando) {
+    return (
+      <p style={{ marginTop: 0 }}>
+        <button type="button" onClick={empezar}>
+          Cambiar n.º de lote
+        </button>
+      </p>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div className="toolbar" style={{ marginBottom: 6 }}>
+        <label>
+          Nuevo n.º de lote <input value={codigo} onChange={(e) => setCodigo(e.target.value)} autoFocus />
+        </label>
+        <button type="button" className="primario" disabled={guardando || !codigo.trim()} onClick={guardar}>
+          Guardar
+        </button>
+        <button type="button" disabled={guardando} onClick={() => setEditando(false)}>
+          Cancelar
+        </button>
+      </div>
+      <p className="texto-suave" style={{ margin: 0 }}>
+        El número es del lote (el stand): el cambio vale para todos sus presupuestos, y también se recalcula su código de facturación.
+      </p>
+      {error && <div className="aviso error">{error}</div>}
+    </div>
+  );
+}
+
 export function PresupuestosPage() {
   const navigate = useNavigate();
   const { puedeEscribir } = useAuth();
@@ -347,6 +415,7 @@ export function PresupuestosPage() {
                 {presupuestoAbierto.evento_nombre} — Lote: {presupuestoAbierto.lote_codigo}
                 {presupuestoAbierto.lote_expositor ? ` (${presupuestoAbierto.lote_expositor})` : ''}
               </h3>
+              <CambiarLote presupuesto={presupuestoAbierto} onCambiado={alCambiarPresupuesto} />
               {cotizacionOrigen && (
                 <p style={{ marginTop: 0 }}>
                   <Link to={`/presupuestos/carga/${cotizacionOrigen.id}`}>Ver el presupuesto original cargado desde la app (PDF y adjuntos)</Link>

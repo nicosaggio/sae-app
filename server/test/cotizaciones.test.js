@@ -790,3 +790,87 @@ test('rechazo automático: al terminar el evento los pendientes quedan rechazado
   assert.equal(estadoDe(otroPendiente.id).estado, 'rechazada');
   assert.equal(estadoDe(delEventoEnCurso.id).estado, 'rechazada');
 });
+
+test('cambiar el número de un lote ya confirmado: la lista, el presupuesto original y el código de facturación lo siguen', async () => {
+  const confirmado = async (extra) => {
+    const p = await nuevaCompleta(extra);
+    await api('oper1', 'POST', `/${p.id}/lineas`, { catalogo_item_id: idDe('CE-100'), cantidad: 1 });
+    const r = await api('oper1', 'POST', `/${p.id}/confirmar`);
+    assert.equal(r.status, 200);
+    return r.cuerpo;
+  };
+  const idPara = (lote, stand) => cot.generarIdCliente({ evento: 'CAPPER', tipo: 'SAE', lote, nombre_stand: stand, responsable: 'Oper Uno' });
+  const original = (id) => ({ ...db.prepare('SELECT lote, id_cliente, numero FROM cotizaciones WHERE id = ?').get(id) });
+  const delLote = (c) => db.prepare('SELECT l.id, l.codigo FROM presupuestos p JOIN lotes l ON l.id = p.lote_id WHERE p.id = ?').get(c.presupuesto_id);
+  const enLista = async (c) => (await llamar('oper1', 'GET', `/presupuestos?eventoId=${eventoUno}`)).cuerpo.find((x) => x.id === c.presupuesto_id);
+
+  // Un stand con dos presupuestos confirmados (los números 1 y 2) y otro stand aparte
+  const a1 = await confirmado({ lote: '40', nombre_stand: 'ALFA STAND' });
+  const a2 = await confirmado({ lote: '40', nombre_stand: 'ALFA STAND' });
+  const beta = await confirmado({ lote: '41', nombre_stand: 'BETA STAND' });
+  assert.equal(delLote(a1).id, delLote(a2).id, 'los dos de ALFA están en el mismo lote');
+  assert.deepEqual([original(a1.id).numero, original(a2.id).numero], [1, 2]);
+
+  // La organización del evento le cambia el número al lote de ALFA
+  assert.equal((await llamar('estado1', 'PUT', `/lotes/${delLote(a1).id}`, { codigo: '58', expositor: 'ALFA STAND' })).status, 403);
+  const r = await llamar('oper1', 'PUT', `/lotes/${delLote(a1).id}`, { codigo: '58', expositor: 'ALFA STAND' });
+  assert.equal(r.status, 200);
+  assert.equal(r.cuerpo.codigo, '58');
+
+  const idNuevo = idPara('58', 'ALFA STAND');
+  assert.notEqual(idNuevo, idPara('40', 'ALFA STAND'), 'el código de facturación lleva los últimos dígitos del lote');
+  assert.deepEqual(original(a1.id), { lote: '58', id_cliente: idNuevo, numero: 1 });
+  assert.deepEqual(original(a2.id), { lote: '58', id_cliente: idNuevo, numero: 2 }, 'los números de presupuesto se conservan');
+  const fila = await enLista(a2);
+  assert.equal(fila.lote_codigo, '58');
+  assert.equal(fila.cod_fac, `${idNuevo}-2`, 'la lista de presupuestos muestra el código nuevo');
+  assert.equal((await api('oper1', 'GET', `/${a2.id}`)).cuerpo.lote, '58', 'el presupuesto original también tiene el número nuevo');
+  assert.equal((await api('oper1', 'GET', '?q=58')).cuerpo.some((c) => c.id === a1.id), true, 'y se lo encuentra buscando por el número nuevo');
+  assert.deepEqual(original(beta.id), { lote: '41', id_cliente: idPara('41', 'BETA STAND'), numero: 1 }, 'los de otros lotes no se tocan');
+
+  // Cambiar sólo el expositor o el contacto no recalcula ningún código
+  const loteBeta = delLote(beta);
+  await llamar('oper1', 'PUT', `/lotes/${loteBeta.id}`, { codigo: '41', expositor: 'BETA STAND', contacto: 'Nuevo contacto' });
+  assert.deepEqual(original(beta.id), { lote: '41', id_cliente: idPara('41', 'BETA STAND'), numero: 1 });
+
+  // Si el código nuevo ya lo usa otro presupuesto con ese mismo número, toma el siguiente libre
+  const delOtroLote = await confirmado({ lote: '99', nombre_stand: 'BETA STAND' }); // BETA STAND, lote ...99: su propio código, número 1
+  assert.equal(original(delOtroLote.id).numero, 1);
+  await llamar('oper1', 'PUT', `/lotes/${loteBeta.id}`, { codigo: '599', expositor: 'BETA STAND' });
+  assert.equal(original(beta.id).id_cliente, idPara('99', 'BETA STAND'));
+  assert.equal(original(beta.id).numero, 2, 'el 1 ya lo tiene el otro presupuesto con ese código');
+  assert.equal(original(delOtroLote.id).numero, 1);
+  assert.equal(db.prepare('SELECT numero FROM presupuestos WHERE id = ?').get(beta.presupuesto_id).numero, '2', 'el presupuesto del evento sigue al número');
+  assert.equal((await enLista(beta)).cod_fac, `${idPara('99', 'BETA STAND')}-2`);
+});
+
+test('cambiar sólo el número del lote (desde el presupuesto confirmado): conserva expositor y contacto, actualiza los presupuestos y avisa si el número ya existe', async () => {
+  const p = await nuevaCompleta({ lote: '70', nombre_stand: 'GAMMA STAND' });
+  await api('oper1', 'POST', `/${p.id}/lineas`, { catalogo_item_id: idDe('CE-100'), cantidad: 1 });
+  const confirmada = (await api('oper1', 'POST', `/${p.id}/confirmar`)).cuerpo;
+  const loteId = db.prepare('SELECT lote_id FROM presupuestos WHERE id = ?').get(confirmada.presupuesto_id).lote_id;
+  db.prepare("UPDATE lotes SET contacto = 'Contacto del lote' WHERE id = ?").run(loteId);
+  const otro = Number(db.prepare("INSERT INTO lotes (evento_id, codigo) VALUES (?, '71')").run(eventoUno).lastInsertRowid);
+
+  const cambiar = (usuario, id, cuerpo) => llamar(usuario, 'PUT', `/lotes/${id}/codigo`, cuerpo);
+  assert.equal((await cambiar('estado1', loteId, { codigo: '72' })).status, 403);
+  assert.equal((await cambiar('oper1', loteId, { codigo: '   ' })).status, 400);
+  assert.equal((await cambiar('oper1', loteId, {})).status, 400);
+  assert.equal((await cambiar('oper1', 999999, { codigo: '72' })).status, 404);
+  const repetido = await cambiar('oper1', loteId, { codigo: '71' });
+  assert.equal(repetido.status, 409);
+  assert.match(repetido.cuerpo.error, /Ya hay otro lote con el número "71"/);
+  assert.equal(db.prepare('SELECT codigo FROM lotes WHERE id = ?').get(loteId).codigo, '70', 'si el número ya existe, no cambia nada');
+  assert.equal((await llamar('oper1', 'PUT', `/lotes/${loteId}`, { codigo: '71', expositor: 'GAMMA STAND' })).status, 409, 'Editar lote también avisa claro');
+
+  const r = await cambiar('oper1', loteId, { codigo: ' 72 ' });
+  assert.equal(r.status, 200);
+  assert.equal(r.cuerpo.codigo, '72', 'se recortan los espacios');
+  assert.equal(r.cuerpo.expositor, 'GAMMA STAND');
+  assert.equal(r.cuerpo.contacto, 'Contacto del lote', 'el contacto no se pisa');
+  assert.equal(db.prepare('SELECT lote FROM cotizaciones WHERE id = ?').get(p.id).lote, '72');
+  const enLista = (await llamar('oper1', 'GET', `/presupuestos?eventoId=${eventoUno}`)).cuerpo.find((x) => x.id === confirmada.presupuesto_id);
+  assert.equal(enLista.lote_codigo, '72');
+  assert.equal(enLista.cod_fac, `${cot.generarIdCliente({ evento: 'CAPPER', tipo: 'SAE', lote: '72', nombre_stand: 'GAMMA STAND', responsable: 'Oper Uno' })}-1`);
+  assert.equal(db.prepare('SELECT codigo FROM lotes WHERE id = ?').get(otro).codigo, '71', 'los demás lotes no se tocan');
+});

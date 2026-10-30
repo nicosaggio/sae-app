@@ -527,6 +527,37 @@ function encontrarOCrearLote(eventoId, codigo, expositor) {
   return existente || lotesService.crear({ eventoId, codigo, expositor, contacto: null });
 }
 
+/**
+ * Cuando la organización del evento cambia el número de un lote, los presupuestos de la app ya
+ * confirmados en él lo acompañan: guardan el número nuevo y se recalcula su código de facturación (que
+ * lleva los últimos dígitos del lote). El número de presupuesto se conserva, salvo que otro presupuesto
+ * ya use ese mismo código con ese número: entonces toma el siguiente libre, y el del presupuesto del
+ * evento lo sigue. Sólo toca los que todavía tienen el número viejo, así que editar sólo el expositor o
+ * el contacto del lote no cambia ningún código.
+ */
+function actualizarLoteDeConfirmadas(loteId, codigoNuevo) {
+  return transaction(() => {
+    const filas = db
+      .prepare(
+        `${SELECT_COTIZACION}
+         WHERE c.estado = 'confirmada' AND c.lote IS NOT ? AND c.presupuesto_id IN (SELECT id FROM presupuestos WHERE lote_id = ?)
+         ORDER BY c.numero, c.id`
+      )
+      .all(codigoNuevo, loteId);
+    for (const fila of filas) {
+      const idCliente = generarIdCliente({ evento: fila.evento_nombre, tipo: fila.tipo, lote: codigoNuevo, nombre_stand: fila.nombre_stand, responsable: fila.responsable });
+      let numero = idCliente ? fila.numero : null;
+      if (idCliente && idCliente !== fila.id_cliente) {
+        const usado = numero !== null && db.prepare('SELECT 1 FROM cotizaciones WHERE id_cliente = ? AND numero = ? AND id != ?').get(idCliente, numero, fila.id);
+        if (numero === null || usado) numero = db.prepare('SELECT COALESCE(MAX(numero), 0) + 1 AS n FROM cotizaciones WHERE id_cliente = ? AND id != ?').get(idCliente, fila.id).n;
+      }
+      db.prepare("UPDATE cotizaciones SET lote = ?, id_cliente = ?, numero = ?, actualizado_en = datetime('now') WHERE id = ?").run(codigoNuevo, idCliente, numero, fila.id);
+      if (numero !== fila.numero) db.prepare("UPDATE presupuestos SET numero = ?, actualizado_en = datetime('now') WHERE id = ?").run(numero === null ? null : String(numero), fila.presupuesto_id);
+    }
+    return filas.length;
+  });
+}
+
 function confirmar(id, usuario) {
   return transaction(() => {
     const cotizacion = obtener(id);
@@ -629,6 +660,7 @@ module.exports = {
   eliminar,
   rechazar,
   rechazarDeEventosTerminados,
+  actualizarLoteDeConfirmadas,
   reabrir,
   duplicar,
   buscarCatalogo,
