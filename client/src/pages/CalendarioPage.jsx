@@ -1,246 +1,307 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useId, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
 import { useAuth } from '../context/AuthContext';
+import { fechaCorta } from '../catalogoFormat';
+import { barrasDeSemana, semanasDelMes, tramosDe } from '../calendarioLogica';
+import { esFechaIso, hoyIso } from '../fechas';
+import { Icono } from '../components/Icono';
+import { PanelLateral } from '../components/PanelLateral';
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
-
-function toISO(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-function construirGrilla(anio, mes) {
-  const primerDiaMes = new Date(anio, mes, 1);
-  const ultimoDiaMes = new Date(anio, mes + 1, 0);
-
-  const offsetInicio = (primerDiaMes.getDay() + 6) % 7; // lunes = 0
-  const inicio = new Date(primerDiaMes);
-  inicio.setDate(inicio.getDate() - offsetInicio);
-
-  const offsetFin = (7 - ((ultimoDiaMes.getDay() + 6) % 7) - 1) % 7;
-  const fin = new Date(ultimoDiaMes);
-  fin.setDate(fin.getDate() + offsetFin);
-
-  const dias = [];
-  const cursor = new Date(inicio);
-  while (cursor <= fin) {
-    dias.push(new Date(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return { dias, inicio, fin };
-}
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const EVENTO_VACIO = { nombre: '', lugar: '', fecha_inicio: '', fecha_fin: '', fecha_armado: '', fecha_desarme: '', notas: '' };
 
 export function CalendarioPage() {
   const navigate = useNavigate();
   const { puedeEscribir } = useAuth();
-  const hoy = new Date();
-  const [anio, setAnio] = useState(hoy.getFullYear());
-  const [mes, setMes] = useState(hoy.getMonth());
+  const hoy = hoyIso();
+  const [anio, setAnio] = useState(Number(hoy.slice(0, 4)));
+  const [mes, setMes] = useState(Number(hoy.slice(5, 7)) - 1);
+  const [nuevo, setNuevo] = useState(null); // el formulario de "Nuevo evento" mientras está abierto
+  const [errorNuevo, setErrorNuevo] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const idf = useId();
 
-  const { dias, inicio, fin } = useMemo(() => construirGrilla(anio, mes), [anio, mes]);
+  const semanas = useMemo(() => semanasDelMes(anio, mes), [anio, mes]);
+  const desde = semanas[0][0];
+  const hasta = semanas[semanas.length - 1][6];
 
-  const { datos: eventos } = usePolling(
-    () => api.get(`/eventos?desde=${toISO(inicio)}&hasta=${toISO(fin)}&con_presupuestos=1`),
-    15000,
-    [toISO(inicio), toISO(fin)]
-  );
+  const { datos: eventos } = usePolling(() => api.get(`/eventos?desde=${desde}&hasta=${hasta}&con_presupuestos=1`), 15000, [desde, hasta]);
   const { datos: alertas } = usePolling(() => api.get('/presupuestos/alertas'), 30000, []);
 
-  const eventosConAlerta = new Set((alertas || []).map((a) => a.evento_id));
+  const conAlerta = useMemo(() => new Set((alertas || []).map((a) => a.evento_id)), [alertas]);
+  const tramos = useMemo(() => (eventos || []).flatMap(tramosDe), [eventos]);
+  const delMes = useMemo(() => {
+    const prefijo = `${anio}-${String(mes + 1).padStart(2, '0')}`;
+    return (eventos || []).filter((e) => e.fecha_inicio.slice(0, 7) === prefijo).sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+  }, [eventos, anio, mes]);
 
-  function eventosDelDia(dia) {
-    const iso = toISO(dia);
-    return (eventos || []).filter((ev) => ev.fecha_inicio <= iso && ev.fecha_fin >= iso);
+  function irAlMes(delta) {
+    const fecha = new Date(anio, mes + delta, 1);
+    setAnio(fecha.getFullYear());
+    setMes(fecha.getMonth());
   }
 
-  // El armado es un período: desde fecha_armado hasta el día antes de que arranque el
-  // evento (fecha_inicio ya se muestra con el chip normal). Análogo para el desarme, desde
-  // el día después de fecha_fin hasta fecha_desarme.
-  function eventosArmadoDelDia(dia) {
-    const iso = toISO(dia);
-    return (eventos || []).filter((ev) => ev.fecha_armado && ev.fecha_armado <= iso && iso < ev.fecha_inicio);
-  }
-
-  function eventosDesarmeDelDia(dia) {
-    const iso = toISO(dia);
-    return (eventos || []).filter((ev) => ev.fecha_desarme && ev.fecha_fin < iso && iso <= ev.fecha_desarme);
-  }
-
-  function irMesAnterior() {
-    const nuevo = new Date(anio, mes - 1, 1);
-    setAnio(nuevo.getFullYear());
-    setMes(nuevo.getMonth());
-  }
-
-  function irMesSiguiente() {
-    const nuevo = new Date(anio, mes + 1, 1);
-    setAnio(nuevo.getFullYear());
-    setMes(nuevo.getMonth());
-  }
-
-  return (
-    <div>
-      <h2>Calendario de eventos</h2>
-
-      <div className="card">
-        <div className="toolbar" style={{ justifyContent: 'space-between' }}>
-          <button onClick={irMesAnterior}>← Anterior</button>
-          <strong>
-            {MESES[mes]} {anio}
-          </strong>
-          <button onClick={irMesSiguiente}>Siguiente →</button>
-        </div>
-
-        <div className="calendario-grid">
-          {DIAS_SEMANA.map((d) => (
-            <div key={d} className="calendario-dia-header">
-              {d}
-            </div>
-          ))}
-          {dias.map((dia) => {
-            const enMes = dia.getMonth() === mes;
-            const iso = toISO(dia);
-            const evs = eventosDelDia(dia);
-            const evsArmado = eventosArmadoDelDia(dia);
-            const evsDesarme = eventosDesarmeDelDia(dia);
-            return (
-              <div key={dia.toISOString()} className={`calendario-celda ${enMes ? '' : 'fuera-de-mes'}`}>
-                <div className="num-dia">{dia.getDate()}</div>
-                {evs.map((ev) => {
-                  // Si el desarme coincide con el último día del evento, no hay un chip de
-                  // desarme aparte — se marca el chip normal de ese día con un borde azul.
-                  const desarmeMismoDia = ev.fecha_desarme && ev.fecha_desarme === ev.fecha_fin && iso === ev.fecha_fin;
-                  return (
-                    <button
-                      key={ev.id}
-                      className={`evento-chip ${eventosConAlerta.has(ev.id) ? 'con-alerta' : ''} ${desarmeMismoDia ? 'desarme-mismo-dia' : ''}`}
-                      title={`${ev.nombre} — ${ev.lugar || ''}`}
-                      onClick={() => navigate(`/eventos/${ev.id}`)}
-                    >
-                      {ev.nombre}
-                    </button>
-                  );
-                })}
-                {evsArmado.map((ev) => (
-                  <button
-                    key={`armado-${ev.id}`}
-                    className="evento-chip armado"
-                    title={`Armado — ${ev.nombre}`}
-                    onClick={() => navigate(`/eventos/${ev.id}`)}
-                  >
-                    🔧 {ev.nombre}
-                  </button>
-                ))}
-                {evsDesarme.map((ev) => (
-                  <button
-                    key={`desarme-${ev.id}`}
-                    className="evento-chip desarme"
-                    title={`Desarme — ${ev.nombre}`}
-                    onClick={() => navigate(`/eventos/${ev.id}`)}
-                  >
-                    📦 {ev.nombre}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {puedeEscribir && <NuevoEventoForm onCreado={() => {}} />}
-    </div>
-  );
-}
-
-function NuevoEventoForm({ onCreado }) {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({
-    nombre: '',
-    lugar: '',
-    fecha_inicio: '',
-    fecha_fin: '',
-    fecha_armado: '',
-    fecha_desarme: '',
-    notas: '',
-  });
-  const [error, setError] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const cerrarNuevo = useCallback(() => setNuevo(null), []);
 
   async function crear(e) {
     e.preventDefault();
-    setError('');
+    const { nombre, fecha_inicio: inicio, fecha_fin: fin } = nuevo;
+    if (!nombre.trim()) return setErrorNuevo('Falta el nombre del evento.');
+    if (!esFechaIso(inicio) || !esFechaIso(fin)) return setErrorNuevo('Completá la fecha de inicio y la de fin.');
+    if (fin < inicio) return setErrorNuevo('La fecha de fin no puede ser anterior a la de inicio.');
+    setErrorNuevo('');
     setEnviando(true);
     try {
-      const evento = await api.post('/eventos', form);
-      onCreado();
+      const evento = await api.post('/eventos', nuevo);
       navigate(`/eventos/${evento.id}`);
     } catch (err) {
-      setError(err.message);
-    } finally {
+      setErrorNuevo(err.message);
       setEnviando(false);
     }
   }
 
+  const campoNuevo = (clave) => ({ value: nuevo?.[clave] ?? '', onChange: (e) => setNuevo({ ...nuevo, [clave]: e.target.value }) });
+  const finAntes = nuevo && esFechaIso(nuevo.fecha_inicio) && esFechaIso(nuevo.fecha_fin) && nuevo.fecha_fin < nuevo.fecha_inicio;
+  const rangoDeEvento = (e) => `${fechaCorta(e.fecha_inicio)}${e.fecha_fin !== e.fecha_inicio ? ` al ${fechaCorta(e.fecha_fin)}` : ''}`;
+
   return (
-    <div className="card">
-      <h3 style={{ marginTop: 0 }}>Nuevo evento</h3>
-      {error && <div className="aviso error">{error}</div>}
-      <form onSubmit={crear} className="form-grid">
-        <div className="campo">
-          <label>Nombre</label>
-          <input required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+    <div className="ed">
+      <header className="pagina-cab">
+        <div>
+          <h1>Calendario de eventos</h1>
+          <p className="sub">Eventos con presupuestos cargados, incluidos los que todavía están pendientes de confirmación.</p>
         </div>
-        <div className="campo">
-          <label>Lugar</label>
-          <input value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} />
+        {puedeEscribir && (
+          <button
+            type="button"
+            className="boton boton--primario"
+            onClick={() => {
+              setErrorNuevo('');
+              setEnviando(false);
+              setNuevo({ ...EVENTO_VACIO });
+            }}
+          >
+            <Icono nombre="plus" />
+            Nuevo evento
+          </button>
+        )}
+      </header>
+
+      <div className="fila fila--entre" style={{ marginBottom: 'var(--s-3)' }}>
+        <div className="fila" style={{ gap: 'var(--s-2)' }}>
+          <button type="button" className="boton boton--icono" aria-label="Mes anterior" onClick={() => irAlMes(-1)}>
+            <Icono nombre="chev-l" />
+          </button>
+          <h2 aria-live="polite" style={{ fontSize: 'var(--t-lg)', minWidth: 170, textAlign: 'center' }}>
+            {MESES[mes]} {anio}
+          </h2>
+          <button type="button" className="boton boton--icono" aria-label="Mes siguiente" onClick={() => irAlMes(1)}>
+            <Icono nombre="chev-r" />
+          </button>
         </div>
-        <div className="campo">
-          <label>Fecha inicio</label>
-          <input
-            type="date"
-            required
-            value={form.fecha_inicio}
-            onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
-          />
+        <div className="leyenda" aria-label="Referencias">
+          <span>
+            <i className="l-armado" />
+            Armado
+          </span>
+          <span>
+            <i className="l-evento" />
+            Evento
+          </span>
+          <span>
+            <i className="l-desarme" />
+            Desarme
+          </span>
+          <span>
+            <span className="leyenda-d" aria-hidden="true">
+              D
+            </span>{' '}
+            Desarme el último día
+          </span>
+          <span>
+            <i className="l-alerta" />
+            Alerta de pago
+          </span>
         </div>
-        <div className="campo">
-          <label>Fecha fin</label>
-          <input
-            type="date"
-            required
-            value={form.fecha_fin}
-            onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
-          />
+      </div>
+
+      <div className="cal" role="group" aria-label={`Calendario de ${MESES[mes]} de ${anio}`}>
+        <div className="cal-dias" aria-hidden="true">
+          {DIAS_SEMANA.map((d) => (
+            <div key={d}>{d}</div>
+          ))}
         </div>
-        <div className="campo">
-          <label>Fecha armado (opcional)</label>
-          <input
-            type="date"
-            value={form.fecha_armado}
-            onChange={(e) => setForm({ ...form, fecha_armado: e.target.value })}
-          />
+        {semanas.map((semana) => {
+          const { barras, carriles } = barrasDeSemana(semana, tramos);
+          return (
+            <div key={semana[0]} className="cal-semana" style={{ gridTemplateRows: `30px repeat(${Math.max(carriles, 2)}, 24px)` }}>
+              {semana.map((dia, i) => {
+                const esHoy = dia === hoy;
+                const fuera = Number(dia.slice(5, 7)) - 1 !== mes;
+                return (
+                  <div key={dia} style={{ display: 'contents' }}>
+                    {esHoy && <div className="cal-hoy-fondo" style={{ gridColumn: i + 1 }} />}
+                    <div className={`cal-num${fuera ? ' fuera' : ''}${i >= 5 ? ' finde' : ''}${esHoy ? ' hoy' : ''}`} style={{ gridColumn: i + 1 }}>
+                      <span aria-label={esHoy ? `Hoy, ${Number(dia.slice(8, 10))}` : undefined}>{Number(dia.slice(8, 10))}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {barras.map((b) => {
+                const e = b.evento;
+                const rotulo = { armado: 'Armado', evento: '', desarme: 'Desarme' }[b.tipo];
+                const desarmeElUltimoDia = b.tipo === 'evento' && e.fecha_desarme === e.fecha_fin && b.hasta <= semana[6];
+                return (
+                  <Link
+                    key={`${b.tipo}-${e.id}`}
+                    className={`cal-barra cal-barra--${b.tipo}${b.cortaIzq ? ' corta-izq' : ''}${b.cortaDer ? ' corta-der' : ''}`}
+                    to={`/eventos/${e.id}`}
+                    style={{ gridColumn: `${b.col1 + 1} / ${b.col2 + 2}`, gridRow: b.carril + 2 }}
+                    title={`${rotulo ? `${rotulo} — ` : ''}${e.nombre}${e.lugar ? ` · ${e.lugar}` : ''}`}
+                  >
+                    {b.tipo === 'evento' && conAlerta.has(e.id) && (
+                      <span className="alerta" title="Alerta de pago" aria-label="Con alerta de pago">
+                        $
+                      </span>
+                    )}
+                    <span className="t">
+                      {rotulo ? `${rotulo} · ` : ''}
+                      {e.nombre}
+                    </span>
+                    {desarmeElUltimoDia && (
+                      <b className="dmark" title="Desarme el último día" aria-label="Desarme el último día">
+                        D
+                      </b>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <section className="cal-agenda" aria-labelledby={`${idf}-agenda`}>
+        <h2 id={`${idf}-agenda`} style={{ marginBottom: 'var(--s-3)' }}>
+          Eventos del mes
+        </h2>
+        <div className="tarjeta">
+          {delMes.length === 0 ? (
+            <div className="vacio">
+              <h3>Sin eventos este mes</h3>
+              <p>No hay eventos con presupuestos cargados.</p>
+            </div>
+          ) : (
+            <table className="tabla tabla--clic tabla--sin-cab">
+              <tbody>
+                {delMes.map((e) => (
+                  <tr
+                    key={e.id}
+                    tabIndex={0}
+                    onClick={() => navigate(`/eventos/${e.id}`)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        navigate(`/eventos/${e.id}`);
+                      }
+                    }}
+                  >
+                    <td>
+                      <strong>{e.nombre}</strong>
+                      {conAlerta.has(e.id) && <span className="etiqueta etiqueta--peligro" style={{ marginLeft: 6 }}>Alerta de pago</span>}
+                      <span className="sub">
+                        {e.lugar ? `${e.lugar} · ` : ''}
+                        {rangoDeEvento(e)}
+                      </span>
+                    </td>
+                    <td className="chev">
+                      <Icono nombre="chev-r" className="icono--sm" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-        <div className="campo">
-          <label>Fecha desarme (opcional)</label>
-          <input
-            type="date"
-            value={form.fecha_desarme}
-            onChange={(e) => setForm({ ...form, fecha_desarme: e.target.value })}
-          />
-        </div>
-        <div className="campo">
-          <label>Notas</label>
-          <input value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} />
-        </div>
-      </form>
-      <button type="button" className="primario" onClick={crear} disabled={enviando} style={{ marginTop: 8 }}>
-        {enviando ? 'Creando…' : '+ Crear evento'}
-      </button>
+      </section>
+
+      {puedeEscribir && nuevo && (
+        <PanelLateral
+          titulo="Nuevo evento"
+          ancho={520}
+          onClose={cerrarNuevo}
+          onSubmit={crear}
+          cabecera={
+            <>
+              <h2>Nuevo evento</h2>
+              <p className="sub" style={{ marginTop: 2 }}>
+                Después podés cargar sus lotes y presupuestos.
+              </p>
+            </>
+          }
+          pie={
+            <>
+              <button type="button" className="boton" onClick={cerrarNuevo}>
+                Cancelar
+              </button>
+              <button type="submit" className="boton boton--primario" disabled={enviando}>
+                <Icono nombre="plus" />
+                {enviando ? 'Creando…' : 'Crear evento'}
+              </button>
+            </>
+          }
+        >
+          {errorNuevo && (
+            <div className="aviso aviso--error" role="alert">
+              <Icono nombre="warn" />
+              <div className="aviso-cuerpo">{errorNuevo}</div>
+            </div>
+          )}
+          <div className="campo">
+            <label htmlFor={`${idf}-nombre`}>
+              Nombre <span style={{ color: 'var(--c-peligro-fg)', fontWeight: 700 }} aria-hidden="true">*</span>
+            </label>
+            <input id={`${idf}-nombre`} autoFocus {...campoNuevo('nombre')} />
+          </div>
+          <div className="campo">
+            <label htmlFor={`${idf}-lugar`}>Lugar</label>
+            <input id={`${idf}-lugar`} {...campoNuevo('lugar')} />
+          </div>
+          <div className="grid grid-2">
+            <div className={`campo${finAntes ? ' campo--error' : ''}`}>
+              <label htmlFor={`${idf}-inicio`}>
+                Fecha de inicio <span style={{ color: 'var(--c-peligro-fg)', fontWeight: 700 }} aria-hidden="true">*</span>
+              </label>
+              <input id={`${idf}-inicio`} type="date" {...campoNuevo('fecha_inicio')} />
+            </div>
+            <div className={`campo${finAntes ? ' campo--error' : ''}`}>
+              <label htmlFor={`${idf}-fin`}>
+                Fecha de fin <span style={{ color: 'var(--c-peligro-fg)', fontWeight: 700 }} aria-hidden="true">*</span>
+              </label>
+              <input id={`${idf}-fin`} type="date" {...campoNuevo('fecha_fin')} />
+            </div>
+            <div className="campo">
+              <label htmlFor={`${idf}-armado`}>
+                Fecha de armado <span style={{ fontWeight: 400, color: 'var(--c-texto-3)' }}>(opcional)</span>
+              </label>
+              <input id={`${idf}-armado`} type="date" {...campoNuevo('fecha_armado')} />
+            </div>
+            <div className="campo">
+              <label htmlFor={`${idf}-desarme`}>
+                Fecha de desarme <span style={{ fontWeight: 400, color: 'var(--c-texto-3)' }}>(opcional)</span>
+              </label>
+              <input id={`${idf}-desarme`} type="date" {...campoNuevo('fecha_desarme')} />
+            </div>
+          </div>
+          <div className="campo">
+            <label htmlFor={`${idf}-notas`}>Notas</label>
+            <textarea id={`${idf}-notas`} rows={3} {...campoNuevo('notas')} />
+          </div>
+        </PanelLateral>
+      )}
     </div>
   );
 }
