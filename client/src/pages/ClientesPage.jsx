@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { fechaCorta } from '../catalogoFormat';
-import { Modal } from '../components/Modal';
+import { DialogoConfirmar } from '../components/DialogoConfirmar';
+import { Icono } from '../components/Icono';
 
 const CAMPOS = [
   ['cuit', 'CUIT'],
@@ -18,11 +20,13 @@ export function ClientesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [lista, setLista] = useState(null);
   const [error, setError] = useState('');
-  const [aviso, setAviso] = useState('');
-  const [editando, setEditando] = useState(null);
+  const [editando, setEditando] = useState(null); // el cliente abierto en la ventana
+  const [borrando, setBorrando] = useState(null); // el cliente que se está por borrar (espera la confirmación)
   const [form, setForm] = useState({});
   const [errorEdicion, setErrorEdicion] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [aviso, mostrarAviso] = useToast();
+  const idf = useId();
 
   const cargar = useCallback(() => {
     api
@@ -45,14 +49,13 @@ export function ClientesPage() {
     setErrorEdicion('');
   }
 
-  async function guardar(e) {
-    e.preventDefault();
+  async function guardar() {
     setGuardando(true);
     setErrorEdicion('');
     try {
       await api.put(`/clientes/${editando.id}`, form);
       setEditando(null);
-      setAviso('Cliente guardado.');
+      mostrarAviso('Cliente guardado');
       cargar();
     } catch (err) {
       setErrorEdicion(err.message);
@@ -61,43 +64,69 @@ export function ClientesPage() {
     }
   }
 
-  async function borrar(cliente) {
-    const nombre = cliente.razon_social || cliente.cuit;
-    if (!confirm(`¿Borrar el cliente "${nombre}"?\n\nLos presupuestos que ya tiene conservan sus datos. Si después se guarda otro presupuesto con este CUIT, el cliente se vuelve a crear.`)) return;
+  async function borrar() {
+    const cliente = borrando;
+    setBorrando(null);
     try {
       await api.del(`/clientes/${cliente.id}`);
-      setAviso('Cliente borrado.');
+      mostrarAviso('Cliente borrado');
       cargar();
     } catch (err) {
       setError(err.message);
     }
   }
 
+  const buscando = busqueda.trim() !== '';
+
   return (
-    <div>
-      <h2>Clientes</h2>
-      <p className="texto-suave" style={{ marginTop: -8 }}>
-        Los clientes se guardan solos, con el CUIT como clave, cuando guardás los datos de un presupuesto. La próxima vez que escribas su CUIT o su razón social, se completan sus datos.
-      </p>
+    <div className="ed">
+      <header className="pagina-cab">
+        <div>
+          <h1>Clientes</h1>
+          <p className="sub">Los clientes se guardan solos, con el CUIT como clave, cuando guardás los datos de un presupuesto. La próxima vez que escribas su CUIT o su razón social, se completan sus datos.</p>
+        </div>
+      </header>
 
-      {error && <div className="aviso error">{error}</div>}
-      {aviso && <div className="aviso exito">{aviso}</div>}
+      {error && (
+        <div className="aviso aviso--error" role="alert" style={{ marginBottom: 'var(--s-5)' }}>
+          <Icono nombre="warn" />
+          <div className="aviso-cuerpo">{error}</div>
+        </div>
+      )}
 
-      <div className="card">
-        <div className="toolbar">
-          <div className="campo" style={{ minWidth: 280 }}>
-            <label>Buscar</label>
-            <input placeholder="Razón social, contacto o CUIT…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+      <section className="tarjeta" aria-label="Lista de clientes">
+        <div className="tarjeta-cuerpo fila fila--entre" style={{ borderBottom: '1px solid var(--c-borde)' }}>
+          <div className="campo" style={{ width: 'min(420px, 100%)' }}>
+            <label htmlFor={`${idf}-buscar`} className="solo-lectores">
+              Buscar
+            </label>
+            <div className="entrada-icono">
+              <Icono nombre="search" />
+              <input id={`${idf}-buscar`} type="search" placeholder="Buscar por razón social, contacto o CUIT…" autoComplete="off" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            </div>
           </div>
+          <span className="sub" aria-live="polite">
+            {lista ? (lista.length === 1 ? '1 cliente' : `${lista.length} clientes`) : ''}
+          </span>
         </div>
 
         {!lista ? (
-          <p className="texto-suave">Cargando…</p>
+          <div className="tarjeta-cuerpo pila" aria-busy="true" aria-label="Cargando">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="esqueleto" />
+            ))}
+          </div>
         ) : lista.length === 0 ? (
-          <p className="texto-suave">{busqueda.trim() ? 'No hay clientes con esa búsqueda.' : 'Todavía no hay clientes guardados. Se van a ir sumando al cargar presupuestos con CUIT.'}</p>
+          <div className="vacio">
+            <span className="icono-vacio">
+              <Icono nombre="users" className="icono--lg" />
+            </span>
+            <h3>{buscando ? 'No hay clientes con esa búsqueda' : 'Todavía no hay clientes guardados'}</h3>
+            <p>{buscando ? 'Probá con otra razón social, contacto o CUIT.' : 'Se van a ir sumando al cargar presupuestos con CUIT.'}</p>
+          </div>
         ) : (
           <div className="tabla-scroll">
-            <table>
+            <table className="tabla tabla--clic">
               <thead>
                 <tr>
                   <th>CUIT</th>
@@ -107,32 +136,48 @@ export function ClientesPage() {
                   <th>Teléfono</th>
                   <th className="num">Presupuestos</th>
                   <th>Último</th>
-                  <th></th>
+                  <th>
+                    <span className="solo-lectores">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {lista.map((c) => (
-                  <tr key={c.id}>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <strong>{c.cuit}</strong>
+                  <tr
+                    key={c.id}
+                    tabIndex={0}
+                    onClick={() => abrir(c)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        abrir(c);
+                      }
+                    }}
+                  >
+                    <td className="codigo">{c.cuit}</td>
+                    <td className="cel-ell" style={{ maxWidth: 220 }} title={c.razon_social || ''}>
+                      <strong style={{ fontWeight: 600 }}>{c.razon_social || '—'}</strong>
                     </td>
-                    <td>{c.razon_social || '—'}</td>
                     <td>{c.contacto || '—'}</td>
-                    <td>{c.mail || '—'}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{c.telefono || '—'}</td>
+                    <td className="cel-ell" style={{ maxWidth: 220 }} title={c.mail || ''}>
+                      {c.mail || '—'}
+                    </td>
+                    <td className="nw">{c.telefono || '—'}</td>
                     <td className="num">{c.presupuestos}</td>
-                    <td className="texto-suave">{c.ultimo_presupuesto ? fechaCorta(c.ultimo_presupuesto) : '—'}</td>
-                    <td className="acciones-fila">
-                      {puedeEscribir ? (
-                        <>
-                          <button onClick={() => abrir(c)}>Editar</button>
-                          <button className="peligro" onClick={() => borrar(c)}>
-                            Borrar
-                          </button>
-                        </>
-                      ) : (
-                        <button onClick={() => abrir(c)}>Ver</button>
-                      )}
+                    <td className="nw" style={{ color: 'var(--c-texto-2)' }}>
+                      {c.ultimo_presupuesto ? fechaCorta(c.ultimo_presupuesto) : '—'}
+                    </td>
+                    <td className="acciones">
+                      <button
+                        type="button"
+                        className="boton boton--sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrir(c);
+                        }}
+                      >
+                        {puedeEscribir ? 'Editar' : 'Ver'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -140,34 +185,64 @@ export function ClientesPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {editando && (
-        <Modal onClose={() => setEditando(null)}>
-          <h3 style={{ marginTop: 0 }}>{puedeEscribir ? 'Editar cliente' : 'Cliente'}</h3>
-          {errorEdicion && <div className="aviso error">{errorEdicion}</div>}
-          <form onSubmit={guardar}>
-            <div className="form-grid">
+        <DialogoConfirmar
+          titulo={puedeEscribir ? 'Editar cliente' : 'Cliente'}
+          subtitulo={`${editando.presupuestos} ${editando.presupuestos === 1 ? 'presupuesto' : 'presupuestos'}${editando.ultimo_presupuesto ? ` · último ${fechaCorta(editando.ultimo_presupuesto)}` : ''}`}
+          textoConfirmar={guardando ? 'Guardando…' : 'Guardar'}
+          ancho={640}
+          foco="primero"
+          formulario
+          soloCerrar={!puedeEscribir}
+          confirmarDeshabilitado={guardando}
+          pieIzquierda={
+            puedeEscribir ? (
+              <button
+                type="button"
+                className="boton boton--peligro-suave"
+                onClick={() => {
+                  setBorrando(editando);
+                  setEditando(null);
+                }}
+              >
+                <Icono nombre="trash" />
+                Borrar cliente
+              </button>
+            ) : null
+          }
+          onConfirmar={guardar}
+          onCancelar={() => !guardando && setEditando(null)}
+        >
+          <div className="pila">
+            {errorEdicion && (
+              <div className="aviso aviso--error" role="alert">
+                <Icono nombre="warn" />
+                <div className="aviso-cuerpo">{errorEdicion}</div>
+              </div>
+            )}
+            <div className="grid grid-2">
               {CAMPOS.map(([campo, etiqueta]) => (
-                <div className="campo" key={campo}>
-                  <label>{etiqueta}</label>
-                  <input value={form[campo]} disabled={!puedeEscribir} onChange={(e) => setForm({ ...form, [campo]: e.target.value })} />
+                <div className={`campo${campo === 'direccion' ? ' span-2' : ''}${campo === 'cuit' && /cuit/i.test(errorEdicion) ? ' campo--error' : ''}`} key={campo}>
+                  <label htmlFor={`${idf}-c-${campo}`}>{etiqueta}</label>
+                  <input id={`${idf}-c-${campo}`} type={campo === 'mail' ? 'email' : undefined} value={form[campo]} disabled={!puedeEscribir} onChange={(e) => setForm({ ...form, [campo]: e.target.value })} />
                 </div>
               ))}
             </div>
-            {puedeEscribir && (
-              <div className="toolbar" style={{ marginTop: 16, marginBottom: 0 }}>
-                <button type="submit" className="primario" disabled={guardando}>
-                  {guardando ? 'Guardando…' : 'Guardar'}
-                </button>
-                <button type="button" onClick={() => setEditando(null)}>
-                  Cancelar
-                </button>
-              </div>
-            )}
-          </form>
-        </Modal>
+          </div>
+        </DialogoConfirmar>
       )}
+
+      {borrando && (
+        <DialogoConfirmar titulo="¿Borrar el cliente?" subtitulo={borrando.razon_social || borrando.cuit} textoConfirmar="Sí, borrar" textoCancelar="No, volver" peligro ancho={500} onConfirmar={borrar} onCancelar={() => setBorrando(null)}>
+          <p>
+            Los presupuestos que ya tiene <strong>conservan sus datos</strong>. Si después se guarda otro presupuesto con este CUIT, el cliente se vuelve a crear.
+          </p>
+        </DialogoConfirmar>
+      )}
+
+      {aviso}
     </div>
   );
 }
