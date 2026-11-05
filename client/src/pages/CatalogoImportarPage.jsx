@@ -13,6 +13,7 @@ export function CatalogoImportarPage() {
   const { usuario } = useAuth();
   const esAdmin = usuario?.rol === 'admin';
   const [archivo, setArchivo] = useState(null);
+  const [aumento, setAumento] = useState('');
   const [claveInput, setClaveInput] = useState(0);
   const [vista, setVista] = useState(null);
   const [aplicado, setAplicado] = useState(null);
@@ -51,14 +52,31 @@ export function CatalogoImportarPage() {
     }
   }
 
+  async function revisarAumento(e) {
+    e.preventDefault();
+    const porcentaje = Number(String(aumento).replace(',', '.'));
+    if (!(porcentaje > 0)) return;
+    setError('');
+    setAplicado(null);
+    setTrabajando('Calculando…');
+    try {
+      setVista(await catalogoApi.post('/importar/aumento', { porcentaje: porcentaje / 100 }));
+    } catch (err) {
+      setVista(null);
+      setError(err.message);
+    } finally {
+      setTrabajando('');
+    }
+  }
+
   function descartar() {
     setVista(null);
     setArchivo(null);
+    setAumento('');
     setClaveInput((n) => n + 1);
   }
 
   async function confirmar() {
-    const versiones = vista.versiones_afectadas.filter((v) => v.items_afectados > 0).length;
     const grandes = vista.resumen.variacionesGrandes;
     const desaparecidos = vista.resumen.codigosDesaparecidos;
     const advertencias = [
@@ -66,7 +84,7 @@ export function CatalogoImportarPage() {
       desaparecidos > 0 ? `${desaparecidos} códigos desaparecieron de la base y quedan con error de precio` : '',
     ].filter(Boolean);
     const texto =
-      `Se hace un backup de la base, se guardan los precios nuevos y se recalculan la General y ${versiones} versión(es).\n\n` +
+      'Se hace un backup de la base, la lista General de hoy se guarda sola en el historial, se guardan los precios nuevos y se recalcula la General. Las versiones de evento no cambian.\n\n' +
       (advertencias.length > 0 ? `Ojo: ${advertencias.join('; ')}.\n\n` : '') +
       '¿Confirmás la actualización?';
     if (!confirm(texto)) return;
@@ -78,6 +96,7 @@ export function CatalogoImportarPage() {
       setAplicado(reporte);
       setVista(null);
       setArchivo(null);
+      setAumento('');
       setClaveInput((n) => n + 1);
       cargarHistorial();
     } catch (err) {
@@ -112,15 +131,29 @@ export function CatalogoImportarPage() {
               {trabajando || 'Revisar cambios'}
             </button>
           </form>
+
+          <h3>Aumentar la base cargada un porcentaje</h3>
+          <p className="texto-suave" style={{ marginTop: 0 }}>
+            Sube todos los precios de la base parche que ya está cargada (sin subir un Excel) y arma con eso una nueva lista General. Igual que con un Excel, primero se muestra qué cambiaría. Las versiones de evento no se tocan.
+          </p>
+          <form onSubmit={revisarAumento} className="toolbar" style={{ marginBottom: 0 }}>
+            <div className="campo">
+              <label htmlFor="aumento-base">Aumento (%)</label>
+              <input id="aumento-base" inputMode="decimal" placeholder="Ej.: 10" value={aumento} onChange={(e) => setAumento(e.target.value)} style={{ width: 120 }} />
+            </div>
+            <button type="submit" className="primario" disabled={!(Number(String(aumento).replace(',', '.')) > 0) || Boolean(trabajando)}>
+              {trabajando || 'Revisar cambios'}
+            </button>
+          </form>
         </div>
       ) : (
-        <div className="aviso advertencia">Sólo un administrador puede actualizar los precios desde la base parche. Abajo podés ver el historial.</div>
+        <div className="aviso advertencia">Sólo un administrador puede actualizar los precios de la base parche. Abajo podés ver el historial.</div>
       )}
 
       {vista && (
         <div>
           <div className="aviso advertencia">
-            <strong>Todavía no se guardó nada.</strong> Revisá los cambios de "{vista.archivo}". Al confirmar se hace un backup de la base y se recalculan la General y {vista.versiones_afectadas.filter((v) => !v.es_general && v.items_afectados > 0).length} versión(es) de evento.
+            <strong>Todavía no se guardó nada.</strong> Revisá los cambios de "{vista.archivo}". Al confirmar se hace un backup de la base, la lista General de hoy queda guardada en el historial y se recalcula la General. Las versiones de evento no cambian.
           </div>
           <div className="toolbar">
             <button className="primario" onClick={confirmar} disabled={Boolean(trabajando)}>

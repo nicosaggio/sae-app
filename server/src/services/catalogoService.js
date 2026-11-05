@@ -1,6 +1,6 @@
 /**
- * ABM del catálogo: ítems (con su regla de precio y sus dependencias), páginas, ajustes y la
- * pantalla de televisores. Todo cambio que toca precios recalcula la versión General en la misma
+ * ABM del catálogo: ítems (con su regla de precio y sus dependencias), páginas (cada versión tiene
+ * las suyas), ajustes y la pantalla de televisores. Todo cambio que toca precios recalcula la versión General en la misma
  * transacción; las versiones de evento no se tocan solas (son una foto).
  */
 const { db, transaction } = require('../db/connection');
@@ -238,9 +238,9 @@ function obtenerItem(id) {
       db
         .prepare(
           `SELECT p.id AS pagina_id, p.orden, p.titulo, po.banda, po.columna FROM catalogo_posiciones po
-             JOIN catalogo_paginas p ON p.id = po.pagina_id WHERE po.item_id = ?`
+             JOIN catalogo_paginas p ON p.id = po.pagina_id WHERE po.item_id = ? AND p.version_id = ?`
         )
-        .get(id) || null,
+        .get(id, calculo.versionGeneral().id) || null,
     precios_por_version: db
       .prepare(
         `SELECT v.id AS version_id, v.nombre, vp.sae, vp.estado_precio FROM catalogo_version_precios vp
@@ -373,21 +373,27 @@ function asignarImagen(id, archivo) {
 
 // ---------------------------------------------------------------- páginas
 
-/** Estructura del catálogo con los precios de una versión (por defecto la General) y el formato de cada ficha. */
-function obtenerPaginas(versionId) {
+function versionDePaginas(versionId) {
   const version = versionId === undefined || versionId === null || Number.isNaN(versionId)
     ? calculo.versionGeneral()
     : db.prepare('SELECT * FROM catalogo_versiones WHERE id = ?').get(versionId);
   if (!version) throw errorHttp(404, 'Versión de catálogo no encontrada');
-  const paginas = db.prepare('SELECT * FROM catalogo_paginas ORDER BY orden, id').all();
+  return version;
+}
+
+/** Páginas de una versión (por defecto la General), con sus precios y el formato de cada ficha. */
+function obtenerPaginas(versionId) {
+  const version = versionDePaginas(versionId);
+  const paginas = db.prepare('SELECT * FROM catalogo_paginas WHERE version_id = ? ORDER BY orden, id').all(version.id);
   const filas = db
     .prepare(
       `SELECT po.pagina_id, po.banda, po.columna, i.id AS item_id, i.codigo, i.descripcion_catalogo, i.descripcion_formato, i.imagen, i.activo, vp.sae, vp.estado_precio
-         FROM catalogo_posiciones po JOIN catalogo_items i ON i.id = po.item_id
+         FROM catalogo_posiciones po JOIN catalogo_paginas p ON p.id = po.pagina_id AND p.version_id = ?
+         JOIN catalogo_items i ON i.id = po.item_id
          LEFT JOIN catalogo_version_precios vp ON vp.item_id = i.id AND vp.version_id = ?
         ORDER BY po.banda, po.columna`
     )
-    .all(version.id);
+    .all(version.id, version.id);
   return paginas.map((p) => ({
     id: p.id,
     orden: p.orden,
@@ -403,10 +409,14 @@ function obtenerPaginas(versionId) {
   }));
 }
 
-/** Reemplaza toda la estructura del catálogo (orden de páginas y qué ítem va en cada celda). Conserva el id de las páginas que ya existían. */
-function guardarPaginas(paginas) {
+/**
+ * Reemplaza las páginas de una versión (por defecto la General): su orden y qué ítem va en cada celda.
+ * Conserva el id de las páginas que ya existían. Las páginas de las demás versiones no se tocan.
+ */
+function guardarPaginas(paginas, versionId) {
   if (!Array.isArray(paginas)) throw errorHttp(400, 'Falta la lista de páginas');
-  const idsExistentes = new Set(db.prepare('SELECT id FROM catalogo_paginas').all().map((p) => p.id));
+  const version = versionDePaginas(versionId);
+  const idsExistentes = new Set(db.prepare('SELECT id FROM catalogo_paginas WHERE version_id = ?').all(version.id).map((p) => p.id));
   const usados = new Set();
   const celdas = new Set();
 
@@ -415,7 +425,7 @@ function guardarPaginas(paginas) {
     const logoGrande = p.logo_grande ? 1 : 0;
     if (logoGrande && i > 0) throw errorHttp(400, 'Sólo la primera página puede llevar el logo grande (la portada)');
     const id = p.id === undefined || p.id === null ? null : Number(p.id);
-    if (id !== null && !idsExistentes.has(id)) throw errorHttp(400, `La página ${id} no existe`);
+    if (id !== null && !idsExistentes.has(id)) throw errorHttp(400, `La página ${id} no existe en la versión "${version.nombre}"`);
     if (id !== null && usados.has(id)) throw errorHttp(400, `La página ${id} está repetida`);
     if (id !== null) usados.add(id);
     const posiciones = (Array.isArray(p.posiciones) ? p.posiciones : []).map((pos) => {
@@ -444,19 +454,28 @@ function guardarPaginas(paginas) {
   }
 
   return transaction(() => {
-    db.exec('DELETE FROM catalogo_posiciones');
+    db.prepare('DELETE FROM catalogo_posiciones WHERE pagina_id IN (SELECT id FROM catalogo_paginas WHERE version_id = ?)').run(version.id);
     for (const id of idsExistentes) if (!usados.has(id)) db.prepare('DELETE FROM catalogo_paginas WHERE id = ?').run(id);
     normalizadas.forEach((p, i) => {
       let id = p.id;
-      if (id === null) id = Number(db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande) VALUES (?, ?, ?)').run(i + 1, p.titulo, p.logoGrande).lastInsertRowid);
-      else db.prepare('UPDATE catalogo_paginas SET orden = ?, titulo = ?, logo_grande = ? WHERE id = ?').run(i + 1, p.titulo, p.logoGrande, id);
+      if (id === null) {
+        id = Number(
+          db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande, version_id) VALUES (?, ?, ?, ?)').run(i + 1, p.titulo, p.logoGrande, version.id).lastInsertRowid
+        );
+      } else {
+        db.prepare('UPDATE catalogo_paginas SET orden = ?, titulo = ?, logo_grande = ? WHERE id = ?').run(i + 1, p.titulo, p.logoGrande, id);
+      }
       for (const pos of p.posiciones) {
         db.prepare('INSERT INTO catalogo_posiciones (pagina_id, banda, columna, item_id) VALUES (?, ?, ?, ?)').run(id, pos.banda, pos.columna, pos.itemId);
       }
     });
-    // "Publicado" = figura en alguna página del catálogo.
-    db.exec('UPDATE catalogo_items SET publicado = CASE WHEN id IN (SELECT item_id FROM catalogo_posiciones) THEN 1 ELSE 0 END');
-    return obtenerPaginas();
+    // "Publicado" = figura en alguna página del catálogo General (el de siempre; las versiones de evento tienen el suyo).
+    db.prepare(
+      `UPDATE catalogo_items SET publicado = CASE WHEN id IN (
+         SELECT po.item_id FROM catalogo_posiciones po JOIN catalogo_paginas p ON p.id = po.pagina_id WHERE p.version_id = ?
+       ) THEN 1 ELSE 0 END`
+    ).run(calculo.versionGeneral().id);
+    return obtenerPaginas(version.id);
   });
 }
 

@@ -52,7 +52,7 @@ test.before(async () => {
   const f = nuevo('MILES', 1234500);
 
   const pagina = (orden, titulo, grande) =>
-    Number(db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande) VALUES (?, ?, ?)').run(orden, titulo, grande).lastInsertRowid);
+    Number(db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande, version_id) VALUES (?, ?, ?, ?)').run(orden, titulo, grande, idGeneral).lastInsertRowid);
   const p1 = pagina(1, 'SAE - EQUIPAMIENTO', 1);
   const p2 = pagina(2, 'SAE - PISOS', 0);
   const poner = (p, banda, columna, item) => db.prepare('INSERT INTO catalogo_posiciones (pagina_id, banda, columna, item_id) VALUES (?, ?, ?, ?)').run(p, banda, columna, item);
@@ -146,6 +146,11 @@ test('el pie legal lleva la fecha de vigencia en letras, y cada versión puede t
     db.prepare("INSERT INTO catalogo_versiones (nombre, porcentaje_global, fecha_vigencia, pie_legal) VALUES ('Feria', 0.55, '2027-01-31', 'Precios especiales hasta el {fecha_vigencia}.')").run().lastInsertRowid
   );
   db.prepare('INSERT INTO catalogo_version_precios (version_id, item_id, pase_parche, porcentaje, sae, estado_precio) SELECT ?, item_id, pase_parche, 0.55, sae + 100, estado_precio FROM catalogo_version_precios WHERE version_id = ?').run(feria, idGeneral);
+  // Cada versión tiene sus propias páginas: ésta, una copia de las de la General.
+  for (const p of db.prepare('SELECT * FROM catalogo_paginas WHERE version_id = ? ORDER BY orden').all(idGeneral)) {
+    const copia = Number(db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande, version_id) VALUES (?, ?, ?, ?)').run(p.orden, p.titulo, p.logo_grande, feria).lastInsertRowid);
+    db.prepare('INSERT INTO catalogo_posiciones (pagina_id, banda, columna, item_id) SELECT ?, banda, columna, item_id FROM catalogo_posiciones WHERE pagina_id = ?').run(copia, p.id);
+  }
   const paginas = await textoPorPagina((await pdfABuffer(feria)).buffer);
   assert.match(paginas[1], /Precios especiales hasta el 31 de enero de 2027\./);
   assert.ok(paginas[1].includes('77.800,00'), 'usa la foto de precios de esa versión, no la de la General');

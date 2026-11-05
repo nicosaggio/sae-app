@@ -152,12 +152,13 @@ El catálogo (sección 8) sigue importando sus propios Excel de precios.
 Menú lateral **"Catálogo"**. Calcula los precios del catálogo SAE a partir de la base parche
 (`$ CLIENTE` de la hoja `BDatos`), los recalcula cuando se carga una base nueva y exporta el
 catálogo a PDF con el mismo diseño del Excel. Permite además tener **versiones** del mismo
-catálogo con otro porcentaje para un evento puntual.
+catálogo con otro porcentaje para un evento puntual. **Cada versión se maneja por separado**: sus
+precios y sus páginas son suyos, y cambiar una no toca a las demás.
 
 Quién puede qué:
 - Los usuarios que pueden escribir editan ítems, páginas, versiones y televisores.
-- Solo el **administrador** carga una base parche nueva (pestaña "Base parche") y cambia los
-  "Ajustes".
+- Solo el **administrador** carga una base parche nueva o la aumenta un porcentaje (pestaña
+  "Base parche") y cambia los "Ajustes".
 - Los usuarios de solo estado no ven "Catálogo" en el menú; si abren la dirección a mano, lo
   ven en modo lectura.
 
@@ -176,6 +177,10 @@ npm run build
 
 y reiniciar el servidor. La migración `0008_catalogo.sql` (tablas del catálogo) se aplica sola
 al arrancar. Sin `npm run build` no aparecen las pantallas nuevas.
+
+La migración `0019_catalogo_paginas_por_version.sql` separa las páginas por versión: las que
+había pasan a ser de la General y cada una de las demás versiones recibe una copia, así que todas
+arrancan viéndose igual que antes de actualizar.
 
 ### 8.2) Carga inicial desde el Excel (una sola vez)
 
@@ -207,14 +212,24 @@ npm run seed:catalogo --workspace=server -- "C:\ruta\CATALOGO SAE.xlsx" "C:\ruta
 1. **Catálogo → Base parche** (como administrador) y elegí el Excel (`.xlsx` o `.xlsm`, hasta
    20 MB, hoja `BDatos`). Tocá **"Revisar cambios"**.
 2. Se muestra el reporte **sin guardar nada**: ítems que cambian de precio, variaciones
-   grandes, códigos que ya no están en la base, ítems que pierden precio y cuántas versiones
-   se recalculan. La revisión vale 30 minutos; si subís otro archivo, reemplaza a la anterior.
+   grandes, códigos que ya no están en la base e ítems que pierden precio. La revisión vale 30
+   minutos; si subís otro archivo, reemplaza a la anterior.
 3. Si está bien, **"Confirmar y aplicar"**. Recién ahí se hace un **backup de la base**, se
-   guardan los precios nuevos y se recalculan la versión General **y todas las versiones de
-   evento** (las versiones del historial de la General, ver 8.5, no se tocan: son una foto
-   fija). Antes de recalcular, se guarda sola una versión con la lista de precios de la General
-   tal como estaba, para no perderla. Queda todo registrado en el historial (archivo, usuario,
-   reporte y un enlace a esa versión guardada).
+   guardan los precios nuevos y se recalcula **sólo la versión General**. Las versiones de evento
+   **no se tocan**: se armaron con los precios de su momento y los conservan (quedan marcadas
+   "desactualizadas" y se recalculan sólo si alguien toca "Recalcular" en esa versión). Antes de
+   recalcular, se guarda sola una versión con la lista de precios de la General tal como estaba,
+   para no perderla. Queda todo registrado en el historial (archivo, usuario, reporte y un enlace
+   a esa versión guardada).
+
+**Aumentar la base cargada un porcentaje.** En la misma pestaña, **"Aumentar la base cargada un
+porcentaje"** sube todos los precios de la base parche que ya está cargada (sin subir un Excel):
+escribís el aumento (por ejemplo `10` para 10 %) y tocás "Revisar cambios". Cada `$ CLIENTE` se
+multiplica por 1 + el porcentaje (los que son texto o están vacíos quedan igual) y con eso se arma
+la nueva lista General, con el mismo redondeo de siempre. Funciona igual que un Excel nuevo: primero
+el reporte sin guardar nada y, al confirmar, backup, foto de la General de antes en el historial
+(8.5) y recálculo **sólo de la General**. En el historial queda como "Aumento del 10 % sobre la base
+cargada".
 
 La aplicación recuerda la última base cargada. Si un código aparece vacío, con texto o en cero
 en `BDatos`, el ítem queda **sin precio** ("S / P"); si el código directamente desapareció de
@@ -231,15 +246,22 @@ dependen de uno sin precio quedan sin precio.
    **"aplicar a todos"**: en ese caso el porcentaje de la versión pisa también los propios.
 3. En **Vista** elegí la versión para revisarla y usá **"Exportar PDF"** (o el botón PDF de la
    lista). El archivo se llama `CATALOGO SAE - <versión> - AAAA-MM-DD.pdf`.
+4. Si hace falta, con la versión elegida en **Vista** usá **"Organizar páginas"** para sacar o
+   cambiar ítems, mover o agregar páginas. Cada versión tiene **sus propias páginas**: una versión
+   nueva arranca con una copia de las de la General, y lo que organices en ella no cambia la
+   General ni ninguna otra versión (ni al revés). "Publicado" (en Ítems) quiere decir que el ítem
+   está en las páginas de la General.
+
+Todas las páginas del PDF llevan el logo arriba a la derecha; si la primera página tiene marcada
+"Con portada", además va antes una hoja sólo con el logo grande.
 
 Cómo se comporta una versión de evento:
-- Es una **foto** de los precios: si después cambia la base o se editan reglas, sigue
-  imprimiendo lo mismo. Por eso se puede reimprimir igual meses después.
-- Si editás ítems o reglas, la General se recalcula pero las versiones de evento quedan
-  marcadas **"desactualizadas"** hasta que uses **"Recalcular"**.
-- Una base parche nueva sí recalcula todas (con aviso antes de confirmar); las del historial de
-  la General (8.5) son la excepción, porque son justamente la foto que no se quiere que cambie.
-- **"Duplicar"** hace una copia exacta de los precios de otra versión.
+- Es una **foto** de los precios: si después cambia la base (un Excel nuevo o un aumento) o se
+  editan reglas, sigue imprimiendo lo mismo. Por eso se puede reimprimir igual meses después.
+- Cuando cambia la base o editás ítems o reglas, sólo se recalcula la General; las versiones de
+  evento quedan marcadas **"desactualizadas"** hasta que uses **"Recalcular"** (que les pone los
+  precios de la base y las reglas de hoy).
+- **"Duplicar"** hace una copia exacta de los precios y de las páginas de otra versión.
 - La versión **General** siempre existe, no se puede borrar ni renombrar y su porcentaje es el
   "porcentaje por defecto" de Ajustes (40 % de origen).
 

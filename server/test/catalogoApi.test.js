@@ -520,3 +520,36 @@ test('historial de importaciones: la siembra queda registrada con su reporte', a
   assert.equal(detalle.resumen.totales.itemsImportados, 8);
   assert.equal((await api('oper1', 'GET', '/importaciones/999999')).status, 404);
 });
+
+test('páginas por versión: una versión nueva arranca con una copia de las de la General y se organiza aparte', async () => {
+  const general = (await api('oper1', 'GET', '/paginas')).cuerpo;
+  const evento = (await api('oper1', 'POST', '/versiones', { nombre: 'Evento páginas', porcentaje_global: 0.5 })).cuerpo;
+  const paginasEvento = (await api('oper1', 'GET', `/paginas?version=${evento.id}`)).cuerpo;
+  const forma = (paginas) => paginas.map((p) => [p.titulo, p.logo_grande, p.posiciones.map((x) => x.item.codigo)]);
+  assert.deepEqual(forma(paginasEvento), forma(general), 'arranca igual que la General');
+  assert.ok(paginasEvento.every((p) => !general.some((g) => g.id === p.id)), 'con páginas propias, no las mismas');
+
+  // Sacar un ítem y una página en la versión de evento no toca la General
+  const [primera] = paginasEvento;
+  const quitado = primera.posiciones[0].item.codigo;
+  const r = await api('oper1', 'PUT', `/paginas?version=${evento.id}`, {
+    paginas: [{ id: primera.id, titulo: 'EVENTO - PORTADA', logo_grande: true, posiciones: primera.posiciones.slice(1).map((x) => ({ banda: x.banda, columna: x.columna, item_id: x.item.id })) }],
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.cuerpo.map((p) => p.titulo), ['EVENTO - PORTADA']);
+  assert.ok(!r.cuerpo[0].posiciones.some((x) => x.item.codigo === quitado));
+  assert.deepEqual(forma((await api('oper1', 'GET', '/paginas')).cuerpo), forma(general), 'la General no cambió');
+  assert.equal(porCodigo(quitado).publicado, 1, '"publicado" sigue mirando la General');
+
+  // Una página de otra versión no se puede usar
+  const ajena = await api('oper1', 'PUT', `/paginas?version=${evento.id}`, { paginas: [{ id: general[0].id, titulo: 'X', posiciones: [] }] });
+  assert.equal(ajena.status, 400);
+  assert.match(ajena.cuerpo.error, /no existe en la versión "Evento páginas"/);
+
+  // Duplicar copia las páginas de la versión de origen; borrar la versión borra sus páginas
+  const copia = (await api('oper1', 'POST', `/versiones/${evento.id}/duplicar`, { nombre: 'Evento páginas 2' })).cuerpo;
+  assert.deepEqual((await api('oper1', 'GET', `/paginas?version=${copia.id}`)).cuerpo.map((p) => p.titulo), ['EVENTO - PORTADA']);
+  await api('oper1', 'DELETE', `/versiones/${copia.id}`);
+  await api('oper1', 'DELETE', `/versiones/${evento.id}`);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM catalogo_paginas WHERE version_id IN (?, ?)').get(evento.id, copia.id).n, 0);
+});

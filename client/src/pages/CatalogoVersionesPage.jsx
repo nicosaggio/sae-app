@@ -425,7 +425,7 @@ export function CatalogoVersionesPage() {
           </table>
         </div>
         <p className="texto-suave" style={{ marginBottom: 0 }}>
-          Cuando cambian los precios de la base parche se recalculan todas las versiones (con aviso antes de confirmar). Si sólo editás reglas o ítems, se recalcula la General y las de evento quedan como "desactualizadas" hasta que las recalcules.
+          Cada versión se maneja por separado: tiene sus propias páginas (una nueva arranca con una copia de las de la General) y sus propios precios. Cuando cambia la base parche (un Excel nuevo o un aumento) o se editan reglas o ítems, sólo se recalcula la General; las de evento conservan sus precios y quedan como "desactualizadas" hasta que uses "Recalcular".
         </p>
       </div>
 

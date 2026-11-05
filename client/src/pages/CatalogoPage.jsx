@@ -61,7 +61,7 @@ function CeldaOrganizable({ posicion, items, onCambiar, onQuitar, conDecimales }
 function Hoja({ pagina, logo, pie, conDecimales, organizando, items, onCelda, onAbrirItem }) {
   return (
     <div className="hoja-catalogo">
-      {!pagina.logo_grande && logo && (
+      {logo && (
         <div className="hoja-logo">
           <img src={logo} alt="Anselmi" />
         </div>
@@ -167,7 +167,7 @@ export function CatalogoPage() {
     }
   }
 
-  // ---- Organizar el catálogo (estructura compartida por todas las versiones)
+  // ---- Organizar las páginas de la versión elegida (cada versión tiene las suyas)
   async function iniciarOrganizar() {
     setError('');
     setAviso('');
@@ -213,7 +213,7 @@ export function CatalogoPage() {
   }
 
   function eliminarPagina() {
-    if (!confirm(`¿Sacar la página "${pagina.titulo}" del catálogo? Los ítems no se borran, sólo dejan de estar publicados.`)) return;
+    if (!confirm(`¿Sacar la página "${pagina.titulo}" de "${version?.nombre}"? Los ítems no se borran y las demás versiones no cambian.`)) return;
     cambiarBorrador((c) => c.splice(indicePagina, 1));
     setIndice(Math.max(0, hojaActual - 1));
   }
@@ -230,10 +230,10 @@ export function CatalogoPage() {
           posiciones: p.posiciones.map((x) => ({ banda: x.banda, columna: x.columna, item_id: x.item.id })),
         })),
       };
-      setPaginas(await api.put('/paginas', cuerpo));
+      setPaginas(await api.put(`/paginas?version=${versionId}`, cuerpo));
       await cargarPaginas();
       setBorrador(null);
-      setAviso('Catálogo guardado.');
+      setAviso(`Páginas de "${version?.nombre}" guardadas. Las de las demás versiones no cambiaron.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -358,7 +358,7 @@ export function CatalogoPage() {
                 )}
               </div>
               <p className="texto-suave" style={{ marginBottom: 0 }}>
-                Escribí el código de un ítem en una celda para ubicarlo (si ya estaba en otro lado, se mueve). Se guarda todo junto con "Guardar catálogo".
+                Estás organizando las páginas de <strong>{version?.nombre}</strong>: lo que cambies acá no toca las de las demás versiones. Escribí el código de un ítem en una celda para ubicarlo (si ya estaba en otro lado, se mueve). Se guarda todo junto con "Guardar catálogo".
               </p>
             </div>
           )}

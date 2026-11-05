@@ -28,7 +28,6 @@ const X_COLUMNA = [0, ANCHO_ITEM + ANCHO_SEPARADOR, 2 * (ANCHO_ITEM + ANCHO_SEPA
 const ALTO = {
   logo: 103.5,
   portada: 972.4,
-  espacioInicial: 18.75,
   titulo: 51.75,
   espacioTitulo: 46.5,
   etiqueta: 18.75,
@@ -138,16 +137,17 @@ function cargarDatos(versionId) {
   }
 
   const ajustes = leerAjustesDePdf();
-  const paginas = db.prepare('SELECT * FROM catalogo_paginas ORDER BY orden, id').all();
+  const paginas = db.prepare('SELECT * FROM catalogo_paginas WHERE version_id = ? ORDER BY orden, id').all(versionId);
   const filas = db
     .prepare(
       `SELECT po.pagina_id, po.banda, po.columna, i.id AS item_id, i.codigo, i.descripcion, i.descripcion_catalogo,
               i.descripcion_formato, i.imagen, vp.sae, vp.estado_precio
          FROM catalogo_posiciones po
+         JOIN catalogo_paginas p ON p.id = po.pagina_id AND p.version_id = ?
          JOIN catalogo_items i ON i.id = po.item_id AND i.activo = 1
          LEFT JOIN catalogo_version_precios vp ON vp.item_id = i.id AND vp.version_id = ?`
     )
-    .all(versionId);
+    .all(versionId, versionId);
 
   const porPagina = new Map(paginas.map((p) => [p.id, { ...p, items: [] }]));
   for (const fila of filas) {
@@ -302,19 +302,13 @@ function dibujarPortada(doc, datos) {
 }
 
 function dibujarPagina(doc, pagina, datos, faltantes) {
-  // La página con "logo grande" va precedida de una portada y no repite el logo arriba.
-  const conLogo = !pagina.logo_grande;
-  const alto =
-    (conLogo ? ALTO.logo : ALTO.espacioInicial) + ALTO.titulo + ALTO.espacioTitulo + 2 * ALTO_BANDA + ALTO.espacioBanda + ALTO.espacioPie + ALTO.pie;
+  // Todas las páginas llevan el logo arriba, también la que viene después de la portada.
+  const alto = ALTO.logo + ALTO.titulo + ALTO.espacioTitulo + 2 * ALTO_BANDA + ALTO.espacioBanda + ALTO.espacioPie + ALTO.pie;
   const hoja = new Hoja(doc, alto);
 
   let y = 0;
-  if (conLogo) {
-    if (datos.logo && fs.existsSync(datos.logo)) hoja.imagen(datos.logo, 0, y, ANCHO_HOJA, ALTO.logo, 'right');
-    y += ALTO.logo;
-  } else {
-    y += ALTO.espacioInicial;
-  }
+  if (datos.logo && fs.existsSync(datos.logo)) hoja.imagen(datos.logo, 0, y, ANCHO_HOJA, ALTO.logo, 'right');
+  y += ALTO.logo;
 
   hoja.texto(pagina.titulo, 0, y, ANCHO_HOJA, ALTO.titulo, { fuente: 'cuerpo-negrita', tamano: 40 });
   hoja.linea(0, y + ALTO.titulo, ANCHO_HOJA, GROSOR.medio);

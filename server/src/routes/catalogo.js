@@ -95,11 +95,12 @@ router.put('/items/:id/imagen', bloquearSiSoloEstado, (req, res, next) => {
 });
 router.delete('/items/:id', bloquearSiSoloEstado, (req, res) => res.json(catalogoService.eliminarItem(id(req))));
 
-// --- Páginas (estructura del catálogo)
-router.get('/paginas', (req, res) => res.json(catalogoService.obtenerPaginas(req.query.version === undefined ? undefined : Number(req.query.version))));
+// --- Páginas (cada versión tiene las suyas; sin ?version= son las de la General)
+const versionDeConsulta = (req) => (req.query.version === undefined ? undefined : Number(req.query.version));
+router.get('/paginas', (req, res) => res.json(catalogoService.obtenerPaginas(versionDeConsulta(req))));
 router.put('/paginas', bloquearSiSoloEstado, (req, res) => {
   const cuerpo = req.body || {};
-  res.json(catalogoService.guardarPaginas(Array.isArray(cuerpo) ? cuerpo : cuerpo.paginas));
+  res.json(catalogoService.guardarPaginas(Array.isArray(cuerpo) ? cuerpo : cuerpo.paginas, versionDeConsulta(req)));
 });
 
 // --- Versiones
@@ -167,6 +168,13 @@ router.post('/importar', requireAdmin, bloquearSiSoloEstado, (req, res, next) =>
       return next(err);
     }
   });
+});
+
+// Aumentar un porcentaje la base parche ya cargada (sin subir un Excel): se previsualiza y se confirma
+// igual que una base nueva, con /importar/confirmar.
+router.post('/importar/aumento', requireAdmin, bloquearSiSoloEstado, (req, res) => {
+  const cuerpo = req.body || {};
+  res.json(baseService.previsualizarAumento(cuerpo.porcentaje, { usuarioId: req.usuario.id }));
 });
 
 router.post('/importar/confirmar', requireAdmin, bloquearSiSoloEstado, async (req, res, next) => {

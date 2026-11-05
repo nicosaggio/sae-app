@@ -1,8 +1,11 @@
 /**
- * Actualización de precios desde una BASE PARCHE nueva, en dos pasos:
- *   1. previsualizar(): lee el archivo, calcula todo con los precios nuevos SIN guardar nada y
- *      devuelve el reporte (qué cambia, qué desaparece, qué queda sin precio, qué versiones se afectan).
- *   2. confirmar(): hace backup, guarda la base nueva y recalcula la General y todas las versiones.
+ * Actualización de precios de la BASE PARCHE, en dos pasos:
+ *   1. previsualizar(): con una base nueva (leída de un Excel) o previsualizarAumento(): con la base ya
+ *      cargada aumentada un porcentaje. Calcula todo con los precios nuevos SIN guardar nada y devuelve
+ *      el reporte (qué cambia, qué desaparece, qué queda sin precio).
+ *   2. confirmar(): hace backup, guarda una foto de la General de antes en el historial, guarda la base
+ *      nueva y recalcula SÓLO la General. Las versiones de evento no se tocan: se armaron con los precios
+ *      de su momento y sólo se recalculan si se lo pide a mano ("Recalcular").
  * El .xlsx de origen nunca se modifica: sólo se lee.
  */
 const crypto = require('crypto');
@@ -32,10 +35,9 @@ function variacionPct(antes, despues) {
 function armarReporte(baseParche, archivo) {
   const items = calculo.leerItems();
   const ajustes = calculo.leerAjustes();
-  // Las versiones del historial de la General son una foto fija: no se recalculan con una base nueva,
-  // así que no cuentan acá (ver confirmar()).
-  const versiones = db.prepare('SELECT * FROM catalogo_versiones WHERE es_historial = 0 ORDER BY es_general DESC, id').all();
-  const general = versiones.find((v) => v.es_general);
+  // Sólo se recalcula la General (ver confirmar()); es la única versión que queda afectada.
+  const general = calculo.versionGeneral();
+  const versiones = [general];
   const nuevos = calculo.calcularParaVersion(general, { items, base: baseParche.precios, ajustes });
 
   const porId = new Map(items.map((i) => [i.id, i]));
@@ -134,6 +136,32 @@ function limpiarVencidas() {
   for (const [token, p] of pendientes) if (ahora - p.creadoEn > VIGENCIA_MS) pendientes.delete(token);
 }
 
+/**
+ * La base parche ya cargada con cada precio aumentado un porcentaje (fracción: 0,1 = 10 %), con la
+ * misma forma que devuelve leerBaseParche. Los valores que no son un número (texto, vacío) quedan igual.
+ */
+function baseAumentada(porcentaje) {
+  const filas = db.prepare('SELECT codigo, cliente_numero, cliente_texto, descripcion, grupo, unidad FROM catalogo_base_precios ORDER BY rowid').all();
+  if (filas.length === 0) throw errorHttp(400, 'Todavía no hay una base parche cargada para aumentar.');
+  const precios = new Map();
+  const resumen = { conCodigo: 0, numericos: 0, ceros: 0, textos: 0, vacios: 0 };
+  const aumentadas = filas.map((f, i) => {
+    const cliente = f.cliente_numero !== null ? Math.round(f.cliente_numero * (1 + porcentaje) * 100) / 100 : f.cliente_texto;
+    resumen.conCodigo++;
+    if (cliente === null) resumen.vacios++;
+    else if (typeof cliente === 'string') resumen.textos++;
+    else if (cliente === 0) resumen.ceros++;
+    else resumen.numericos++;
+    const clave = normalizarCodigo(f.codigo);
+    if (!precios.has(clave)) precios.set(clave, cliente);
+    return { fila: i + 1, grupo: f.grupo, codigo: f.codigo, descripcion: f.descripcion, unidad: f.unidad, cliente };
+  });
+  return { precios, filas: aumentadas, duplicados: [], sinCodigo: [], ocultas: [], resumen };
+}
+
+/** "10 %", "12,5 %" */
+const textoPorcentaje = (fraccion) => `${(Math.round(fraccion * 10000) / 100).toLocaleString('es-AR')} %`;
+
 /** Paso 1: sólo lee y calcula. Devuelve el reporte y un token para confirmar. */
 function previsualizar(baseParche, { archivo, usuarioId }) {
   limpiarVencidas();
@@ -145,7 +173,16 @@ function previsualizar(baseParche, { archivo, usuarioId }) {
   return { token, vence_en: new Date(creadoEn + VIGENCIA_MS).toISOString(), ...reporte };
 }
 
-/** Paso 2: backup, guardar la base nueva y recalcular la General y todas las versiones, todo en una transacción. */
+/** Paso 1 de un aumento: la base cargada hoy, con todos sus precios aumentados `porcentaje` (fracción). */
+function previsualizarAumento(porcentaje, { usuarioId }) {
+  const n = typeof porcentaje === 'string' && porcentaje.trim() !== '' ? Number(porcentaje.replace(',', '.')) : porcentaje;
+  if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0 || n > 3) {
+    throw errorHttp(400, 'El aumento tiene que ser una fracción mayor a 0 y hasta 3 (0,1 = 10 %)');
+  }
+  return previsualizar(baseAumentada(n), { archivo: `Aumento del ${textoPorcentaje(n)} sobre la base cargada`, usuarioId });
+}
+
+/** Paso 2: backup, guardar la base nueva y recalcular la General (sólo ella), todo en una transacción. */
 async function confirmar(token, { usuarioId, hacerBackup = null }) {
   limpiarVencidas();
   const pendiente = pendientes.get(token);
@@ -162,7 +199,7 @@ async function confirmar(token, { usuarioId, hacerBackup = null }) {
     const historial = armado.resumen.itemsConCambios > 0 ? versionesService.guardarHistorialGeneral() : null;
     calculo.guardarBasePrecios(pendiente.baseParche);
     const contexto = { items: calculo.leerItems(), base: calculo.leerBasePrecios(), ajustes: calculo.leerAjustes() };
-    for (const v of db.prepare('SELECT id FROM catalogo_versiones WHERE es_historial = 0').all()) calculo.recalcularVersion(v.id, contexto);
+    calculo.recalcularGeneral(contexto);
     db.prepare('INSERT INTO catalogo_importaciones (archivo, usuario_id, items_afectados, resumen_json, historial_version_id) VALUES (?, ?, ?, ?, ?)').run(
       pendiente.archivo,
       usuarioId,
@@ -176,4 +213,4 @@ async function confirmar(token, { usuarioId, hacerBackup = null }) {
   return reporte;
 }
 
-module.exports = { previsualizar, confirmar, armarReporte, VIGENCIA_MS, _pendientes: pendientes };
+module.exports = { previsualizar, previsualizarAumento, baseAumentada, confirmar, armarReporte, VIGENCIA_MS, _pendientes: pendientes };

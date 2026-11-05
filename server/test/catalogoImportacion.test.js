@@ -144,11 +144,11 @@ test('previsualizar: calcula todo y NO guarda nada', async () => {
   assert.equal(p.codigos_nuevos_en_base[0].cliente, 5000);
   assert.equal(p.codigos_nuevos_en_base[1].cliente, 'S / P');
 
-  // Versiones que quedan afectadas
+  // Sólo se recalcula la General: las versiones de evento no quedan afectadas
   const versiones = Object.fromEntries(p.versiones_afectadas.map((v) => [v.nombre, v]));
   assert.ok(versiones.General.items_afectados >= 5);
-  assert.ok(versiones.Feria.items_afectados >= 5);
-  assert.equal(p.resumen.versionesAfectadas, 2);
+  assert.equal(versiones.Feria, undefined);
+  assert.equal(p.resumen.versionesAfectadas, 1);
 
   // Advertencias del archivo
   assert.deepEqual(p.advertencias.codigos_repetidos_en_el_archivo, [{ codigo: 'CE-100', filas: [3, 6] }]);
@@ -190,7 +190,7 @@ test('confirmar: exige token vigente y del mismo usuario', async () => {
   assert.equal(contar('catalogo_importaciones'), 1);
 });
 
-test('confirmar: backup ANTES de escribir, base nueva guardada, General y versiones recalculadas, y todo registrado', async () => {
+test('confirmar: backup ANTES de escribir, base nueva guardada, sólo la General recalculada, y todo registrado', async () => {
   const previa = (await subir('admin1', BASE_NUEVA(), 'BASE PARCHE nueva.xlsx')).cuerpo;
   const antesFeria = db.prepare("SELECT vp.sae FROM catalogo_version_precios vp JOIN catalogo_versiones v ON v.id = vp.version_id JOIN catalogo_items i ON i.id = vp.item_id WHERE v.nombre = 'Feria' AND i.codigo = 'CE-100'").get().sae;
   assert.equal(antesFeria, 1600);
@@ -213,9 +213,9 @@ test('confirmar: backup ANTES de escribir, base nueva guardada, General y versio
   assert.equal(sae('TV-43').sae, 355800, 'los manuales no cambian');
   assert.deepEqual({ ...sae('PB-1') }, { sae: null, estado_precio: 'error' }, 'el código que desapareció no queda en $ 0');
 
-  // La foto de la versión de evento también se recalculó (con su 55 %)
+  // La versión de evento conserva sus precios: se armó con los de su momento
   const feria = db.prepare("SELECT vp.sae FROM catalogo_version_precios vp JOIN catalogo_versiones v ON v.id = vp.version_id JOIN catalogo_items i ON i.id = vp.item_id WHERE v.nombre = 'Feria' AND i.codigo = 'CE-100'").get().sae;
-  assert.equal(feria, 3100, '2.000 × 1,55');
+  assert.equal(feria, 1600, 'no se recalcula sola');
 
   // La base nueva quedó guardada (la primera aparición gana) y sirve para recalcular después
   assert.equal(contar('catalogo_base_precios'), 3);
@@ -326,4 +326,40 @@ test('si ya existe una versión con el nombre automático de hoy, el historial s
 
   assert.notEqual(r.cuerpo.historial_version.nombre, nombreDeHoy, 'no puede repetir el nombre que ya existía');
   assert.match(r.cuerpo.historial_version.nombre, /\(2\)$/);
+});
+
+test('aumento: sube un porcentaje la base cargada, guarda la General de antes y no toca las versiones de evento', async () => {
+  const baseAntes = db.prepare("SELECT cliente_numero FROM catalogo_base_precios WHERE codigo = 'CE-100'").get().cliente_numero;
+  const textoAntes = db.prepare("SELECT cliente_texto FROM catalogo_base_precios WHERE codigo = 'NUEVO-2'").get().cliente_texto;
+  const feria = () => db.prepare("SELECT vp.sae FROM catalogo_version_precios vp JOIN catalogo_versiones v ON v.id = vp.version_id JOIN catalogo_items i ON i.id = vp.item_id WHERE v.nombre = 'Feria' AND i.codigo = 'CE-100'").get().sae;
+  const feriaAntes = feria();
+  const saeAntes = sae('CE-100').sae;
+
+  assert.equal((await api('oper1', 'POST', '/importar/aumento', { porcentaje: 0.1 })).status, 403, 'sólo un administrador');
+  for (const malo of [0, -0.1, 'diez', 5]) {
+    const r = await api('admin1', 'POST', '/importar/aumento', { porcentaje: malo });
+    assert.equal(r.status, 400);
+    assert.match(r.cuerpo.error, /El aumento tiene que ser una fracción mayor a 0/);
+  }
+
+  const previa = (await api('admin1', 'POST', '/importar/aumento', { porcentaje: 0.1 })).cuerpo;
+  assert.equal(previa.archivo, 'Aumento del 10 % sobre la base cargada');
+  const ce100 = previa.cambios.find((c) => c.codigo === 'CE-100');
+  assert.equal(ce100.pase_nuevo, Math.round(baseAntes * 1.1 * 100) / 100);
+  assert.deepEqual(previa.versiones_afectadas.map((v) => v.nombre), ['General']);
+  assert.equal(db.prepare("SELECT cliente_numero FROM catalogo_base_precios WHERE codigo = 'CE-100'").get().cliente_numero, baseAntes, 'previsualizar no guarda nada');
+
+  const r = await api('admin1', 'POST', '/importar/confirmar', { token: previa.token });
+  assert.equal(r.status, 200);
+  assert.equal(db.prepare("SELECT cliente_numero FROM catalogo_base_precios WHERE codigo = 'CE-100'").get().cliente_numero, Math.round(baseAntes * 1.1 * 100) / 100);
+  assert.equal(db.prepare("SELECT cliente_texto FROM catalogo_base_precios WHERE codigo = 'NUEVO-2'").get().cliente_texto, textoAntes, 'un texto queda igual');
+  assert.ok(sae('CE-100').sae > saeAntes, 'la General tiene los precios nuevos');
+  assert.equal(feria(), feriaAntes, 'la versión de evento conserva sus precios');
+
+  // La General de antes quedó guardada en el historial, con su precio viejo
+  const guardada = r.cuerpo.historial_version;
+  assert.ok(guardada);
+  const fotoVieja = db.prepare("SELECT vp.sae FROM catalogo_version_precios vp JOIN catalogo_items i ON i.id = vp.item_id WHERE vp.version_id = ? AND i.codigo = 'CE-100'").get(guardada.id).sae;
+  assert.equal(fotoVieja, saeAntes);
+  assert.equal((await api('admin1', 'GET', '/importaciones')).cuerpo[0].archivo, 'Aumento del 10 % sobre la base cargada');
 });

@@ -1,7 +1,8 @@
 /**
  * Versiones del catálogo: la "General" (siempre existe, no se borra) y las de evento con otro
  * porcentaje de markup. Cada versión guarda una foto de precios con la que se generó, para poder
- * reimprimir igual un catálogo viejo aunque después cambie la base.
+ * reimprimir igual un catálogo viejo aunque después cambie la base, y sus propias páginas: una versión
+ * nueva arranca con una copia de las de la General (o de la que se duplica) y se organiza aparte.
  */
 const { db, transaction } = require('../db/connection');
 const calculo = require('./catalogoCalculoService');
@@ -75,6 +76,18 @@ function armarVersion(version, contexto) {
   };
 }
 
+/** Copia las páginas de una versión (con qué ítem va en cada celda) a otra que todavía no tiene. */
+function copiarPaginas(origenId, destinoId) {
+  const insertarPagina = db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande, version_id) VALUES (?, ?, ?, ?)');
+  const copiarPosiciones = db.prepare(
+    'INSERT INTO catalogo_posiciones (pagina_id, banda, columna, item_id) SELECT ?, banda, columna, item_id FROM catalogo_posiciones WHERE pagina_id = ?'
+  );
+  for (const p of db.prepare('SELECT * FROM catalogo_paginas WHERE version_id = ? ORDER BY orden, id').all(origenId)) {
+    const nuevaId = Number(insertarPagina.run(p.orden, p.titulo, p.logo_grande, destinoId).lastInsertRowid);
+    copiarPosiciones.run(nuevaId, p.id);
+  }
+}
+
 const contextoDeCalculo = () => ({ items: calculo.leerItems(), base: calculo.leerBasePrecios(), ajustes: calculo.leerAjustes() });
 
 function listarVersiones() {
@@ -101,12 +114,13 @@ function crearVersion(datos = {}) {
         .run(nombre, porcentaje, datos.aplicar_a_todos ? 1 : 0, fecha, pieValido(datos.pie_legal)).lastInsertRowid
     );
     calculo.recalcularVersion(id);
+    copiarPaginas(calculo.versionGeneral().id, id);
     return obtenerVersion(id);
   });
 }
 
 /**
- * Copia parámetros y foto de precios tal cual (no recalcula: el duplicado sale igual que el original).
+ * Copia parámetros, foto de precios y páginas tal cual (no recalcula: el duplicado sale igual que el original).
  * Duplicar la General (o un historial) da como resultado otra versión "del historial" — fija, no se
  * recalcula sola con una base parche nueva: es justamente cómo se guarda una versión vieja con nombre.
  * Duplicar una versión de evento da otra versión de evento normal.
@@ -125,6 +139,7 @@ function duplicarVersion(id, datos = {}) {
       `INSERT INTO catalogo_version_precios (version_id, item_id, pase_parche, porcentaje, sae, estado_precio)
        SELECT ?, item_id, pase_parche, porcentaje, sae, estado_precio FROM catalogo_version_precios WHERE version_id = ?`
     ).run(nuevoId, id);
+    copiarPaginas(id, nuevoId);
     return obtenerVersion(nuevoId);
   });
 }
@@ -166,6 +181,7 @@ function crearVersionImportada({ nombre, lista, aplicarATodos = false, fechaVige
       const conPrecio = typeof crudo === 'number' && crudo > 0;
       insertar.run(id, item.id, conPrecio ? Math.round(crudo) : null, conPrecio ? 'ok' : 'sin_precio');
     }
+    copiarPaginas(calculo.versionGeneral().id, id);
     return obtenerVersion(id);
   });
 }

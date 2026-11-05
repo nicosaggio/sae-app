@@ -141,11 +141,11 @@ function aplicarPlan({ plan, excel, baseParche, imagenes, ajustes, reemplazar, r
 
     // Páginas y posiciones
     const avisos = [...plan.avisos];
-    const insertarPagina = db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande) VALUES (?, ?, ?)');
+    const insertarPagina = db.prepare('INSERT INTO catalogo_paginas (orden, titulo, logo_grande, version_id) VALUES (?, ?, ?, ?)');
     const insertarPosicion = db.prepare('INSERT INTO catalogo_posiciones (pagina_id, banda, columna, item_id) VALUES (?, ?, ?, ?)');
     let posiciones = 0;
     for (const pagina of excel.paginas) {
-      const paginaId = Number(insertarPagina.run(pagina.orden, pagina.titulo, pagina.logoGrande ? 1 : 0).lastInsertRowid);
+      const paginaId = Number(insertarPagina.run(pagina.orden, pagina.titulo, pagina.logoGrande ? 1 : 0, general.id).lastInsertRowid);
       pagina.bandas.forEach((banda, i) => {
         if (i > 1) {
           avisos.push(`La página ${pagina.orden} tiene más de 2 bandas: se ignoró la banda ${i + 1}`);
