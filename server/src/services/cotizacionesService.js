@@ -620,15 +620,20 @@ function obtenerCroquis(id) {
   return croquisService.obtenerDeCotizacion(id);
 }
 
-/** Se dibuja mientras el presupuesto está pendiente; al confirmarlo pasa al lote y ahí se sigue editando. */
+/** Un rechazado es de sólo lectura (se reabre para cambiarlo); pendiente o confirmado se puede dibujar. */
+function exigirCroquisEditable(fila) {
+  if (fila.estado === 'rechazada') throw errorHttp(409, 'Este presupuesto está rechazado. Reabrilo para poder dibujar el croquis.');
+}
+
+/** Pendiente, se dibuja en el presupuesto; confirmado, en el presupuesto y en su lote a la vez (es el mismo croquis). */
 function guardarCroquis(id, datos, usuario) {
-  exigirPendiente(leerFila(id));
-  return croquisService.guardarDeCotizacion(id, datos, usuario);
+  exigirCroquisEditable(leerFila(id));
+  return transaction(() => croquisService.guardarDeCotizacion(id, datos, usuario));
 }
 
 function eliminarCroquis(id) {
-  exigirPendiente(leerFila(id));
-  croquisService.eliminarDeCotizacion(id);
+  exigirCroquisEditable(leerFila(id));
+  transaction(() => croquisService.eliminarDeCotizacion(id));
 }
 
 /** Que el croquis salga o no en el PDF se puede cambiar siempre, como en los adjuntos. */

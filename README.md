@@ -498,16 +498,22 @@ confirma: `confirmable.requisitos`). Al confirmar:
 - Si el presupuesto tiene un **croquis dibujado** (9.4), pasa también al lote para que salga en el
   PDF de totales del evento. Si el lote ya tenía un croquis (de otro presupuesto del mismo stand),
   se conserva ese y no se pisa; la pantalla avisa qué pasó.
-- El presupuesto original queda **cerrado**: para cambiarlo se edita dentro del evento. Desde la
+- El presupuesto original queda **cerrado** (salvo su croquis, ver 9.4): para cambiarlo se edita dentro del evento. Desde la
   ventana Presupuestos, al abrir uno de origen App hay un enlace al original (PDF y adjuntos).
 
 ### 9.4) Croquis del stand y planos adjuntos
 
 **Croquis dibujado en la app.** En la ficha de un presupuesto, la tarjeta **"Croquis del stand"**
 tiene el botón **"Dibujar croquis"** (o **"Editar croquis"**), que abre el mismo editor de la
-sección 10 (paredes, materiales del catálogo, cotas y comentarios). Se dibuja mientras el
-presupuesto está **pendiente**: confirmado o rechazado se puede ver pero no modificar (el croquis
-del stand se sigue editando desde el lote, sección 10).
+sección 10 (paredes, materiales del catálogo, cotas y comentarios). Se dibuja con el presupuesto
+**pendiente** o **confirmado**; uno **rechazado** se puede ver pero no modificar (se reabre para
+cambiarlo).
+
+Una vez **confirmado**, el presupuesto y su lote tienen **el mismo croquis**: lo que se dibuja desde la
+ficha del presupuesto se guarda también en el lote (y sale en el PDF de totales del evento), y lo que se
+dibuja desde el lote (sección 10) se ve en el presupuesto. Borrarlo desde el presupuesto lo borra de los
+dos. Si el croquis se dibujó sólo desde el lote, el presupuesto lo muestra pero no lo pone en su PDF
+hasta que se tilde la casilla de abajo (así un PDF que ya se le mandó al cliente no cambia solo).
 
 - **Casilla "Incluir el croquis en el PDF del presupuesto"**: elige si el croquis sale o no. Viene
   tildada al dibujarlo y se puede cambiar siempre, incluso con el presupuesto confirmado.

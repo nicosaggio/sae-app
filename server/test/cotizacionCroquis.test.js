@@ -157,7 +157,7 @@ test('la opción de incluir el croquis en el PDF: sólo con croquis dibujado, y 
   assert.equal((await croquisDe('oper1', id)).cuerpo.incluir_en_pdf, false);
   assert.equal((await opcion(true)).cuerpo.croquis.incluir_en_pdf, true);
 
-  // Aun confirmado se puede cambiar (el dibujo no, pero la opción del PDF sí).
+  // Aun confirmado se puede cambiar.
   assert.equal((await llamar('oper1', 'POST', `/cotizaciones/${id}/confirmar`)).status, 200);
   assert.equal((await opcion(false)).status, 200);
 });
@@ -188,7 +188,7 @@ test('un croquis sin comentarios sale sin el cuadro de comentarios', async () =>
   assert.ok(!texto.includes('COMENTARIOS'));
 });
 
-test('el croquis se dibuja sólo mientras el presupuesto está pendiente', async () => {
+test('un presupuesto rechazado tiene el croquis de sólo lectura hasta que se reabre', async () => {
   const id = await nuevoPresupuesto();
   await croquisDe('oper1', id, 'PUT', dibujo());
   await llamar('oper1', 'POST', `/cotizaciones/${id}/rechazar`);
@@ -280,5 +280,51 @@ test('si el croquis no entra debajo de las condiciones, pasa a una hoja nueva co
 test('un croquis hecho sólo de columnas (sin ítems de catálogo) también sale en el PDF', async () => {
   const id = await nuevoPresupuesto();
   await croquisDe('oper1', id, 'PUT', { paredes: [], materiales: [{ bloque: 'COLUMNA', x: 0, y: 0 }, { bloque: 'COLUMNA', x: 1, y: 0 }], comentarios: '' });
+  assert.match((await pdfDe(id)).join(' '), /CROQUIS DEL STAND/);
+});
+
+test('confirmado, el croquis se sigue dibujando desde el presupuesto y es el mismo que el del lote', async () => {
+  const id = await nuevoPresupuesto({ lote: '50', nombre: 'STAND CINCUENTA' });
+  assert.equal((await llamar('oper1', 'POST', `/cotizaciones/${id}/confirmar`)).status, 200);
+  const lote = db.prepare("SELECT id FROM lotes WHERE evento_id = ? AND codigo = '50'").get(eventoId);
+  const delLote = () => db.prepare('SELECT * FROM lote_croquis WHERE lote_id = ?').get(lote.id);
+
+  // Se dibuja por primera vez después de confirmar: queda en el presupuesto y en el lote
+  const r = await croquisDe('oper1', id, 'PUT', dibujo());
+  assert.equal(r.status, 200);
+  assert.equal(r.cuerpo.incluir_en_pdf, true, 'como al dibujarlo pendiente, sale en el PDF del presupuesto');
+  assert.equal(JSON.parse(delLote().materiales).length, 2);
+  assert.match((await pdfDe(id)).join(' '), /CROQUIS DEL STAND/);
+
+  // Lo que se cambia desde el lote se ve en el presupuesto (y en su PDF)
+  await llamar('oper1', 'PUT', `/lotes/${lote.id}/croquis`, { ...dibujo(), materiales: [], comentarios: 'CAMBIADO DESDE EL LOTE' });
+  const visto = (await croquisDe('oper1', id)).cuerpo;
+  assert.equal(visto.materiales.length, 0);
+  assert.equal(visto.comentarios, 'CAMBIADO DESDE EL LOTE');
+  assert.equal((await llamar('oper1', 'GET', `/cotizaciones/${id}`)).cuerpo.croquis.materiales, 0, 'el resumen de la ficha también');
+  assert.match((await pdfDe(id)).join(' '), /CAMBIADO DESDE EL LOTE/);
+
+  // Y lo que se cambia desde el presupuesto, en el lote
+  await croquisDe('oper1', id, 'PUT', { ...dibujo(), comentarios: 'CAMBIADO DESDE EL PRESUPUESTO' });
+  assert.equal(delLote().comentarios, 'CAMBIADO DESDE EL PRESUPUESTO');
+
+  // Borrarlo desde el presupuesto lo borra de los dos
+  assert.equal((await croquisDe('oper1', id, 'DELETE')).status, 200);
+  assert.equal(delLote(), undefined);
+  assert.equal((await croquisDe('oper1', id)).cuerpo, null);
+});
+
+test('confirmado con un croquis dibujado sólo desde el lote: se ve en el presupuesto, pero sale en su PDF recién al tildarlo', async () => {
+  const id = await nuevoPresupuesto({ lote: '51', nombre: 'STAND CINCUENTA Y UNO' });
+  await llamar('oper1', 'POST', `/cotizaciones/${id}/confirmar`);
+  const lote = db.prepare("SELECT id FROM lotes WHERE evento_id = ? AND codigo = '51'").get(eventoId);
+  await llamar('oper1', 'PUT', `/lotes/${lote.id}/croquis`, dibujo());
+
+  const ficha = (await llamar('oper1', 'GET', `/cotizaciones/${id}`)).cuerpo;
+  assert.equal(ficha.croquis.materiales, 2);
+  assert.equal(ficha.croquis.incluir_en_pdf, false);
+  assert.ok(!(await pdfDe(id)).join(' ').includes('CROQUIS DEL STAND'), 'el PDF que ya se mandó no cambia solo');
+
+  assert.equal((await llamar('oper1', 'PUT', `/cotizaciones/${id}/croquis/pdf`, { incluir_en_pdf: true })).status, 200);
   assert.match((await pdfDe(id)).join(' '), /CROQUIS DEL STAND/);
 });

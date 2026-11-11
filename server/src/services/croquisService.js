@@ -77,6 +77,7 @@ function exigirCotizacion(cotizacionId) {
 
 // El croquis se guarda igual en dos lugares: en el lote (el definitivo, el que sale en los totales del
 // evento) y en el presupuesto de la app mientras el lote todavía no existe (se crea al confirmarlo).
+// Una vez confirmado, el presupuesto y su lote comparten el mismo croquis (ver obtenerDeCotizacion).
 // Los nombres de tabla y de columna son constantes de acá, nunca vienen del usuario.
 const ALMACEN_LOTE = { tabla: 'lote_croquis', columna: 'lote_id', exigir: exigirLote };
 const ALMACEN_COTIZACION = { tabla: 'cotizacion_croquis', columna: 'cotizacion_id', exigir: exigirCotizacion, conIncluirEnPdf: true };
@@ -189,9 +190,55 @@ const eliminar = (loteId) => eliminarDe(ALMACEN_LOTE, loteId);
 
 // --- Croquis de un presupuesto de la app (cotización) -------------------------------------------
 
-const obtenerDeCotizacion = (cotizacionId) => obtenerDe(ALMACEN_COTIZACION, cotizacionId);
-const guardarDeCotizacion = (cotizacionId, datos, usuario) => guardarEn(ALMACEN_COTIZACION, cotizacionId, datos, usuario);
-const eliminarDeCotizacion = (cotizacionId) => eliminarDe(ALMACEN_COTIZACION, cotizacionId);
+/** El lote de un presupuesto de la app ya confirmado, o null si todavía no se confirmó. */
+function loteDeCotizacion(cotizacionId) {
+  const fila = db
+    .prepare("SELECT p.lote_id FROM cotizaciones c JOIN presupuestos p ON p.id = c.presupuesto_id WHERE c.id = ? AND c.estado = 'confirmada'")
+    .get(cotizacionId);
+  return fila ? fila.lote_id : null;
+}
+
+/** Fila cruda del croquis vigente: el del lote si el presupuesto está confirmado y el lote tiene uno; si no, el propio. */
+function filaVigenteDeCotizacion(cotizacionId) {
+  const loteId = loteDeCotizacion(cotizacionId);
+  const delLote = loteId === null ? null : db.prepare('SELECT * FROM lote_croquis WHERE lote_id = ?').get(loteId);
+  return delLote || db.prepare('SELECT * FROM cotizacion_croquis WHERE cotizacion_id = ?').get(cotizacionId) || null;
+}
+
+/** Si el croquis sale en el PDF del presupuesto; sin fila propia (dibujado sólo desde el lote), no sale. */
+function incluyeEnPdf(cotizacionId) {
+  const propio = db.prepare('SELECT incluir_en_pdf FROM cotizacion_croquis WHERE cotizacion_id = ?').get(cotizacionId);
+  return propio ? Boolean(propio.incluir_en_pdf) : false;
+}
+
+/**
+ * El croquis de un presupuesto. Confirmado, es el mismo que el de su lote (el que sale en los totales
+ * del evento, que también se edita desde la pantalla del evento); `incluir_en_pdf` sigue siendo del
+ * presupuesto, y si el croquis se dibujó sólo desde el lote no sale en su PDF hasta que se lo tilde.
+ */
+function obtenerDeCotizacion(cotizacionId) {
+  const propio = obtenerDe(ALMACEN_COTIZACION, cotizacionId);
+  const loteId = loteDeCotizacion(cotizacionId);
+  const delLote = loteId === null ? null : obtenerDe(ALMACEN_LOTE, loteId);
+  if (!delLote) return propio;
+  const { lote_id: _lote, ...dibujo } = delLote;
+  return { cotizacion_id: cotizacionId, incluir_en_pdf: incluyeEnPdf(cotizacionId), ...dibujo };
+}
+
+/** Confirmado, se guarda en el presupuesto y en su lote a la vez: los dos quedan con el mismo croquis. */
+function guardarDeCotizacion(cotizacionId, datos, usuario) {
+  const loteId = loteDeCotizacion(cotizacionId);
+  if (loteId !== null) guardarEn(ALMACEN_LOTE, loteId, datos, usuario);
+  guardarEn(ALMACEN_COTIZACION, cotizacionId, datos, usuario);
+  return obtenerDeCotizacion(cotizacionId);
+}
+
+/** Confirmado, se borra también el del lote (es el mismo croquis). */
+function eliminarDeCotizacion(cotizacionId) {
+  const loteId = loteDeCotizacion(cotizacionId);
+  eliminarDe(ALMACEN_COTIZACION, cotizacionId);
+  if (loteId !== null) eliminarDe(ALMACEN_LOTE, loteId);
+}
 
 /** Si el croquis sale o no en el PDF del presupuesto. */
 function definirIncluirEnPdf(cotizacionId, incluir) {
@@ -200,30 +247,38 @@ function definirIncluirEnPdf(cotizacionId, incluir) {
   const info = db
     .prepare("UPDATE cotizacion_croquis SET incluir_en_pdf = ?, actualizado_en = datetime('now') WHERE cotizacion_id = ?")
     .run(incluir ? 1 : 0, cotizacionId);
-  if (info.changes === 0) throw error(404, 'Este presupuesto todavía no tiene un croquis dibujado');
+  if (info.changes === 0) {
+    // Confirmado, con un croquis dibujado sólo desde el lote: el presupuesto todavía no tiene el suyo.
+    const fila = filaVigenteDeCotizacion(cotizacionId);
+    if (!fila) throw error(404, 'Este presupuesto todavía no tiene un croquis dibujado');
+    db.prepare(
+      'INSERT INTO cotizacion_croquis (cotizacion_id, paredes, materiales, cotas, comentarios, incluir_en_pdf, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(cotizacionId, fila.paredes, fila.materiales, fila.cotas, fila.comentarios, incluir ? 1 : 0, fila.creado_por);
+  }
   return obtenerDeCotizacion(cotizacionId);
 }
 
 /** Datos de la ficha del presupuesto, sin traer todo el dibujo; null si todavía no dibujaron uno. */
 function resumenDeCotizacion(cotizacionId) {
-  const fila = db.prepare('SELECT paredes, materiales, cotas, comentarios, incluir_en_pdf FROM cotizacion_croquis WHERE cotizacion_id = ?').get(cotizacionId);
+  const fila = filaVigenteDeCotizacion(cotizacionId);
   if (!fila) return null;
   return {
     paredes: parseJsonArray(fila.paredes).length,
     materiales: parseJsonArray(fila.materiales).length,
     cotas: parseJsonArray(fila.cotas).length,
     con_comentarios: Boolean((fila.comentarios || '').trim()),
-    incluir_en_pdf: Boolean(fila.incluir_en_pdf),
+    incluir_en_pdf: incluyeEnPdf(cotizacionId),
   };
 }
 
-/** Copia el croquis de un presupuesto a otro (al duplicarlo). Devuelve si había algo para copiar. */
+/** Copia el croquis de un presupuesto a otro (al duplicarlo), el vigente si estaba confirmado. Devuelve si había algo para copiar. */
 function copiarDeCotizacion(origenId, destinoId, usuario) {
-  const fila = db.prepare('SELECT * FROM cotizacion_croquis WHERE cotizacion_id = ?').get(origenId);
+  const fila = filaVigenteDeCotizacion(origenId);
   if (!fila) return false;
+  const propio = db.prepare('SELECT incluir_en_pdf FROM cotizacion_croquis WHERE cotizacion_id = ?').get(origenId);
   db.prepare(
     'INSERT INTO cotizacion_croquis (cotizacion_id, paredes, materiales, cotas, comentarios, incluir_en_pdf, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(destinoId, fila.paredes, fila.materiales, fila.cotas, fila.comentarios, fila.incluir_en_pdf, usuario.id);
+  ).run(destinoId, fila.paredes, fila.materiales, fila.cotas, fila.comentarios, propio ? propio.incluir_en_pdf : 1, usuario.id);
   return true;
 }
 

@@ -184,7 +184,8 @@ function CroquisCard({ cot, puedeEscribir, onCot }) {
   const [error, setError] = useState('');
   const [trabajando, setTrabajando] = useState(false);
   const resumen = cot.croquis;
-  const puedeDibujar = puedeEscribir && cot.estado === 'pendiente';
+  // Un rechazado sólo se mira; confirmado se sigue dibujando (es el mismo croquis que el del lote).
+  const puedeDibujar = puedeEscribir && cot.estado !== 'rechazada';
 
   async function cambiarInclusion(incluir) {
     setError('');
@@ -204,8 +205,10 @@ function CroquisCard({ cot, puedeEscribir, onCot }) {
         <div>
           <h2 id="ed-t-croquis">Croquis del stand</h2>
           <p className="sub">
-            Dibujá el plano del stand con los materiales del catálogo, las paredes y las cotas, y elegí si sale o no en el PDF del presupuesto. Al confirmar el presupuesto, el croquis pasa al lote del stand
-            y sale en los totales del evento.
+            Dibujá el plano del stand con los materiales del catálogo, las paredes y las cotas, y elegí si sale o no en el PDF del presupuesto.{' '}
+            {cot.estado === 'confirmada'
+              ? 'Como ya está confirmado, es el mismo croquis que el del lote del stand: lo que cambies acá sale también en los totales del evento.'
+              : 'Al confirmar el presupuesto, el croquis pasa al lote del stand y sale en los totales del evento.'}
           </p>
         </div>
       </div>

@@ -446,9 +446,11 @@ export function CroquisLotePage() {
   }, [eventoId, loteId, cotizacionId, esPresupuesto, rutaCroquis]);
 
   const lote = esPresupuesto ? null : contexto?.lotes?.find((l) => l.id === Number(loteId));
-  // Un presupuesto confirmado o rechazado ya no se dibuja (al confirmarlo el croquis pasó al lote), y un
-  // usuario que sólo puede cambiar estados no edita nada: en esos casos la pantalla es sólo para mirar.
-  const soloLectura = !puedeEscribir || (esPresupuesto && contexto?.estado !== 'pendiente');
+  // Un presupuesto rechazado ya no se dibuja (se reabre para cambiarlo), y un usuario que sólo puede cambiar
+  // estados no edita nada: en esos casos la pantalla es sólo para mirar. Uno confirmado sí se dibuja: el
+  // servidor lo guarda también en su lote.
+  const confirmado = esPresupuesto && contexto?.estado === 'confirmada';
+  const soloLectura = !puedeEscribir || (esPresupuesto && contexto?.estado === 'rechazada');
 
   // Mantiene la proporción ancho/alto del SVG tal como se renderiza (para que 1m sea igual en X e Y).
   useEffect(() => {
@@ -857,7 +859,8 @@ export function CroquisLotePage() {
   }
 
   async function eliminarCroquis() {
-    if (!confirm(`¿Borrar todo el croquis de ${esPresupuesto ? 'este presupuesto' : 'este lote'}? No se puede deshacer.`)) return;
+    const deQuien = !esPresupuesto ? 'este lote' : confirmado ? 'este presupuesto y de su lote (es el mismo croquis)' : 'este presupuesto';
+    if (!confirm(`¿Borrar todo el croquis de ${deQuien}? No se puede deshacer.`)) return;
     setError('');
     try {
       await api.del(rutaCroquis);
@@ -909,13 +912,14 @@ export function CroquisLotePage() {
         <div className="aviso advertencia">
           {!puedeEscribir
             ? 'Tu usuario solo puede ver el croquis.'
-            : 'Este presupuesto ya no está pendiente, así que el croquis es de solo lectura. Si se confirmó, el croquis del stand se edita desde el lote.'}
+            : 'Este presupuesto está rechazado, así que el croquis es de solo lectura. Reabrilo para poder dibujarlo.'}
         </div>
       )}
       {esPresupuesto && !soloLectura && (
         <p className="texto-suave" style={{ marginTop: 0 }}>
-          Este croquis sale en el PDF del presupuesto (en la ficha del presupuesto elegís si se incluye o no) y, al confirmarlo, pasa al lote del stand para el PDF de
-          totales del evento.
+          {confirmado
+            ? 'Este presupuesto ya está confirmado: este croquis es el mismo que el del lote del stand. Al guardar se actualiza en los dos, así que sale en el PDF del presupuesto (si en la ficha está tildado) y en el PDF de totales del evento.'
+            : 'Este croquis sale en el PDF del presupuesto (en la ficha del presupuesto elegís si se incluye o no) y, al confirmarlo, pasa al lote del stand para el PDF de totales del evento.'}
         </p>
       )}
 
