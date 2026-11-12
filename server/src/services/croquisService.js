@@ -1,6 +1,6 @@
 /**
  * Croquis (plano de planta) de un lote o de un presupuesto de la app: paredes sueltas + materiales del catálogo colocados con
- * posición y rotación. La biblioteca de símbolos dibujables (geometría + color, extraída del
+ * posición, rotación y, si se los dio vuelta, espejo (de izquierda a derecha, dentro de su caja, antes de girar). La biblioteca de símbolos dibujables (geometría + color, extraída del
  * AutoCAD real de la empresa) vive en data/croquisSimbolos.json — sólo cubre los ítems de
  * catálogo para los que se encontró un símbolo genuino; un ítem sin símbolo no es elegible para
  * dibujar (no se inventa uno parecido).
@@ -55,6 +55,7 @@ function armar(fila, almacen = ALMACEN_LOTE) {
         x: m.x,
         y: m.y,
         rotacion: m.rotacion || 0,
+        espejo: Boolean(m.espejo),
         codigo: auxiliar ? m.bloque : item ? item.codigo : null,
         descripcion: auxiliar ? auxiliar.descripcion : item ? item.descripcion : null,
         ancho: simbolo ? simbolo.ancho : null,
@@ -114,14 +115,17 @@ function normalizarMateriales(materiales) {
   );
   return materiales.map((m) => {
     const rotacion = m.rotacion === undefined ? 0 : numero(m.rotacion, 'rotacion');
+    if (m.espejo !== undefined && typeof m.espejo !== 'boolean') throw error(400, '"espejo" tiene que ser verdadero o falso');
+    // Sólo se guarda cuando está dado vuelta: los croquis de antes (sin el campo) quedan iguales.
+    const espejo = m.espejo ? { espejo: true } : {};
     if (esBloque(m)) {
       if (!bloqueAuxiliar(m.bloque)) throw error(400, 'Uno de los materiales usa un bloque que no existe');
-      return { bloque: m.bloque, x: numero(m.x, 'x'), y: numero(m.y, 'y'), rotacion };
+      return { bloque: m.bloque, x: numero(m.x, 'x'), y: numero(m.y, 'y'), rotacion, ...espejo };
     }
     if (!Number.isInteger(m.catalogo_item_id) || !validos.has(m.catalogo_item_id)) {
       throw error(400, 'Uno de los materiales no tiene un ítem de catálogo válido');
     }
-    return { catalogo_item_id: m.catalogo_item_id, x: numero(m.x, 'x'), y: numero(m.y, 'y'), rotacion };
+    return { catalogo_item_id: m.catalogo_item_id, x: numero(m.x, 'x'), y: numero(m.y, 'y'), rotacion, ...espejo };
   });
 }
 

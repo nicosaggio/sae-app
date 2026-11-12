@@ -668,7 +668,13 @@ Se maneja como un CAD: **rueda del mouse** = zoom, **click central y arrastre** 
 arrastre sobre el plano** = selección múltiple (de izquierda a derecha, sólo lo que queda adentro;
 de derecha a izquierda, lo que toca el rectángulo), **Shift+click** = sumar o quitar de la
 selección, **Ctrl+C / Ctrl+V** = copiar y pegar, **R** = rotar la selección entera como una sola
-pieza, **Supr** = borrar, **Ctrl+A** = seleccionar todo, **Esc** = cancelar.
+pieza, **M** = espejo, **Supr** = borrar, **Ctrl+A** = seleccionar todo, **Esc** = cancelar.
+
+**Espejo** (botón "Espejo (M)" al seleccionar, o la tecla **M**): da vuelta la selección de izquierda a
+derecha, como el MIRROR de AutoCAD con una línea vertical por el medio de la selección. Con un solo
+material, queda en el mismo lugar pero dado vuelta (por ejemplo, una puerta que abría para un lado pasa
+a abrir para el otro); con varios, además cambian de lado entre sí. Para el espejo de arriba a abajo:
+espejo y después dos veces **R**. Sale igual en el PDF del presupuesto y en el de totales del evento.
 
 ### 10.2) Símbolos disponibles
 

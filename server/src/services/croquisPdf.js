@@ -200,6 +200,8 @@ function dibujar(doc, plan, { x, y, espacio, escala }) {
     doc.save();
     doc.translate(m.x, m.y);
     doc.rotate(m.rotacion || 0, { origin: [m.simbolo.ancho / 2, m.simbolo.profundidad / 2] });
+    // En espejo, dado vuelta de izquierda a derecha dentro de su caja (igual que en el editor).
+    if (m.espejo) doc.translate(m.simbolo.ancho, 0).scale(-1, 1);
     dibujarSimbolo(doc, m.simbolo);
     doc.restore();
   }

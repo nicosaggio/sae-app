@@ -65,12 +65,20 @@ function offsetDesdeCursor(a, b, cursor) {
 
 const limpio = (v) => Math.round(v * 10000) / 10000; // saca el ruido de punto flotante (1.0499999999999998 -> 1.05)
 
-/** Pasa un punto del símbolo (coordenadas locales) al plano: mismo giro que el dibujo, rotate(rotacion, ancho/2, profundidad/2) sobre translate(x, y). */
+/** Transformación SVG de un material: posición, giro sobre su centro y, si está en espejo, vuelta de izquierda a derecha. */
+const transformDeMaterial = (m) =>
+  `translate(${m.x},${m.y}) rotate(${m.rotacion}, ${(m.ancho || 0) / 2}, ${(m.profundidad || 0) / 2})${m.espejo ? ` translate(${m.ancho || 0},0) scale(-1,1)` : ''}`;
+
+/**
+ * Pasa un punto del símbolo (coordenadas locales) al plano: mismo giro que el dibujo, rotate(rotacion,
+ * ancho/2, profundidad/2) sobre translate(x, y). Un material en espejo se da vuelta de izquierda a
+ * derecha dentro de su caja antes de girar.
+ */
 function aMundo(m, px, py) {
   const w = m.ancho || 0;
   const h = m.profundidad || 0;
   const rad = ((m.rotacion || 0) * Math.PI) / 180;
-  const dx = px - w / 2;
+  const dx = (m.espejo ? w - px : px) - w / 2;
   const dy = py - h / 2;
   return { x: m.x + w / 2 + dx * Math.cos(rad) - dy * Math.sin(rad), y: m.y + h / 2 + dx * Math.sin(rad) + dy * Math.cos(rad) };
 }
@@ -584,6 +592,8 @@ export function CroquisLotePage() {
         borrarSeleccionados();
       } else if (e.key.toLowerCase() === 'r' && seleccionados.size > 0 && !enCampo) {
         rotarSeleccionados();
+      } else if (e.key.toLowerCase() === 'm' && !ctrl && seleccionados.size > 0 && !enCampo) {
+        espejarSeleccionados();
       } else if (ctrl && e.key.toLowerCase() === 'a' && !enCampo) {
         e.preventDefault();
         setSeleccionados(new Set(materiales.map((_, i) => i)));
@@ -777,7 +787,7 @@ export function CroquisLotePage() {
   // (no cada bloque sobre sí mismo): las posiciones relativas entre bloques también giran, como el
   // comando ROTATE de AutoCAD con varios objetos seleccionados. Con un solo bloque da lo mismo que
   // rotarlo sobre su propio centro, porque ahí la caja conjunta es la del bloque.
-  function rotarSeleccionados() {
+  function centroDeSeleccion() {
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -789,8 +799,11 @@ export function CroquisLotePage() {
       maxX = Math.max(maxX, bx2);
       maxY = Math.max(maxY, by2);
     });
-    const pivoteX = (minX + maxX) / 2;
-    const pivoteY = (minY + maxY) / 2;
+    return { pivoteX: (minX + maxX) / 2, pivoteY: (minY + maxY) / 2 };
+  }
+
+  function rotarSeleccionados() {
+    const { pivoteX, pivoteY } = centroDeSeleccion();
 
     setMateriales((ms) =>
       ms.map((m, i) => {
@@ -805,6 +818,27 @@ export function CroquisLotePage() {
           x: limpio(nuevoCentroX - (m.ancho || 0) / 2),
           y: limpio(nuevoCentroY - (m.profundidad || 0) / 2),
           rotacion: (m.rotacion + 90) % 360,
+        };
+      })
+    );
+    setSinGuardar(true);
+  }
+
+  // Espejo de izquierda a derecha de todo el grupo seleccionado, sobre la línea vertical que pasa por el
+  // centro de su caja conjunta (como MIRROR de AutoCAD): los bloques cambian de lado y cada uno queda dado
+  // vuelta. Dar vuelta un bloque girado equivale a girarlo al revés y darlo vuelta en su caja, por eso la
+  // rotación pasa a ser la opuesta. Para el espejo de arriba a abajo: espejo y dos veces R.
+  function espejarSeleccionados() {
+    const { pivoteX } = centroDeSeleccion();
+    setMateriales((ms) =>
+      ms.map((m, i) => {
+        if (!seleccionados.has(i)) return m;
+        const centroX = m.x + (m.ancho || 0) / 2;
+        return {
+          ...m,
+          x: limpio(2 * pivoteX - centroX - (m.ancho || 0) / 2),
+          rotacion: (360 - m.rotacion) % 360,
+          espejo: !m.espejo,
         };
       })
     );
@@ -844,7 +878,7 @@ export function CroquisLotePage() {
     try {
       await api.put(rutaCroquis, {
         paredes,
-        materiales: materiales.map((m) => ({ catalogo_item_id: m.catalogo_item_id, bloque: m.bloque, x: m.x, y: m.y, rotacion: m.rotacion })),
+        materiales: materiales.map((m) => ({ catalogo_item_id: m.catalogo_item_id, bloque: m.bloque, x: m.x, y: m.y, rotacion: m.rotacion, espejo: Boolean(m.espejo) })),
         cotas,
         comentarios,
       });
@@ -1022,6 +1056,9 @@ export function CroquisLotePage() {
               )}
               <div className="toolbar" style={{ marginBottom: 0, marginTop: 6, flexWrap: 'wrap' }}>
                 <button onClick={rotarSeleccionados}>Rotar 90° (R)</button>
+                <button onClick={espejarSeleccionados} title="Da vuelta la selección de izquierda a derecha">
+                  Espejo (M)
+                </button>
                 <button onClick={copiarSeleccionados}>Copiar (Ctrl+C)</button>
                 <button className="peligro" onClick={borrarSeleccionados}>
                   Quitar (Supr)
@@ -1066,7 +1103,7 @@ export function CroquisLotePage() {
             {materiales.map((m, i) => (
               <g
                 key={i}
-                transform={`translate(${m.x},${m.y}) rotate(${m.rotacion}, ${(m.ancho || 0) / 2}, ${(m.profundidad || 0) / 2})`}
+                transform={transformDeMaterial(m)}
                 onMouseDown={(e) => iniciarArrastre(e, i)}
                 onClick={(e) => e.stopPropagation()}
                 // En modo paredes o cotas, o mientras se coloca un material nuevo, los clicks pasan "a través" de los
@@ -1178,7 +1215,7 @@ export function CroquisLotePage() {
       <p className="texto-suave" style={{ marginTop: 2, fontSize: 12 }}>
         Click: seleccionar · Click y arrastre sobre el plano: selección múltiple (de izquierda a derecha, sólo lo que queda adentro; de
         derecha a izquierda, lo que toca el rectángulo) · Shift+click: sumar/quitar de la selección · Rueda del mouse: zoom · Click
-        central y arrastre: paneo · Ctrl+C / Ctrl+V: copiar y pegar · R: rotar · Supr: borrar · Esc: cancelar · Cotas: 3 clicks (punto,
+        central y arrastre: paneo · Ctrl+C / Ctrl+V: copiar y pegar · R: rotar · M: espejo · Supr: borrar · Esc: cancelar · Cotas: 3 clicks (punto,
         punto, ubicación de la línea); para borrar una cota, click sobre su medida
       </p>
     </div>

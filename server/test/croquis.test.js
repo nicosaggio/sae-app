@@ -262,3 +262,41 @@ test('biblioteca de símbolos: sólo devuelve ítems activos con símbolo real (
   assert.equal(r.cuerpo['PB-250'].catalogo_item_id, db.prepare("SELECT id FROM catalogo_items WHERE codigo = 'PB-250'").get().id);
   assert.equal(r.cuerpo['PC-250'], undefined, 'ítem dado de baja: no aparece aunque tenga símbolo');
 });
+
+test('espejo: se guarda sólo en los materiales dados vuelta, se devuelve en todos y se valida', async () => {
+  const r = await croquis('oper1', 'PUT', {
+    paredes: [],
+    materiales: [
+      { catalogo_item_id: itemCeId, x: 0, y: 0, rotacion: 270, espejo: true },
+      { catalogo_item_id: itemCeId, x: 2, y: 0, rotacion: 0, espejo: false },
+      { bloque: 'COLUMNA', x: 1, y: 1 },
+    ],
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.cuerpo.materiales.map((m) => [m.rotacion, m.espejo]), [[270, true], [0, false], [0, false]]);
+  const guardados = JSON.parse(db.prepare('SELECT materiales FROM lote_croquis WHERE lote_id = ?').get(loteId).materiales);
+  assert.equal(guardados[0].espejo, true);
+  assert.ok(!('espejo' in guardados[1]) && !('espejo' in guardados[2]), 'sin espejo no se guarda el campo: los croquis de antes quedan iguales');
+
+  const malo = await croquis('oper1', 'PUT', { paredes: [], materiales: [{ catalogo_item_id: itemCeId, x: 0, y: 0, espejo: 'si' }] });
+  assert.equal(malo.status, 400);
+  assert.match(malo.cuerpo.error, /"espejo" tiene que ser verdadero o falso/);
+});
+
+test('espejo en el PDF: el símbolo se da vuelta de izquierda a derecha dentro de su caja', async () => {
+  const PDFDocument = require('pdfkit');
+  const croquisPdf = require('../src/services/croquisPdf');
+  const contenido = async (espejo) => {
+    const doc = new PDFDocument({ compress: false, autoFirstPage: true });
+    const partes = [];
+    doc.on('data', (p) => partes.push(p));
+    const terminado = new Promise((r) => doc.on('end', r));
+    const plan = croquisPdf.preparar(doc, { paredes: [], cotas: [], comentarios: '', materiales: [{ catalogo_item_id: itemCeId, x: 0, y: 0, rotacion: 0, espejo }] }, new Map([[itemCeId, 'CE-100']]), 500);
+    croquisPdf.dibujar(doc, plan, { x: 50, y: 50, espacio: 600, escala: croquisPdf.escalaParaEspacio(plan, 600) });
+    doc.end();
+    await terminado;
+    return Buffer.concat(partes).toString('latin1');
+  };
+  assert.match(await contenido(true), /-1 0 0 1 0 0 cm/);
+  assert.doesNotMatch(await contenido(false), /-1 0 0 1 0 0 cm/);
+});
