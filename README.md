@@ -649,8 +649,9 @@ guardado), que abre un editor. Es el mismo que se abre desde la ficha de un pres
   (Escape para cancelar). Cada material ya colocado se puede arrastrar, rotar y borrar.
   Al colocar o mover un material se **engancha** (imán) al centro de las columnas, a las
   esquinas y a las puntas de pared que tenga cerca, y se ve una vista previa con un marcador
-  del punto: así un dintel queda centrado exacto sobre la columna de un panel. Si no hay nada
-  cerca, va a la grilla de 10 cm. Los **spots** se apoyan en la línea de un dintel: el extremo de
+  del punto: así un dintel queda centrado exacto sobre la columna de un panel. Las **cenefas** y
+  los cenefones finitos se enganchan igual que un dintel, por las puntas y el medio de su eje, y
+  quedan centrados de columna a columna. Si no hay nada cerca, va a la grilla de 10 cm. Los **spots** se apoyan en la línea de un dintel: el extremo de
   su brazo se engancha al punto más cercano de la línea y se desliza a lo largo de ella de a 10 cm
   (si hay un extremo o el medio del dintel cerca, se engancha a ese punto). El brazo tiene que
   quedar de ese lado: se gira con **R** y se vuelve a acercar.

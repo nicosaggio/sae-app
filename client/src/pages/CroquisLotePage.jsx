@@ -83,10 +83,15 @@ function aMundo(m, px, py) {
   return { x: m.x + w / 2 + dx * Math.cos(rad) - dy * Math.sin(rad), y: m.y + h / 2 + dx * Math.sin(rad) + dy * Math.cos(rad) };
 }
 
+/** Una barra es un símbolo largo y finito (al menos 4 veces más largo que ancho), como una cenefa. */
+const PROPORCION_BARRA = 4;
+
 /**
  * Puntos "enganchables" de un material, en metros del plano y ya rotado: el centro de cada círculo
  * de su símbolo ("centro": las columnas de un panel) y los extremos y el medio de sus líneas (un
- * dintel es una línea sola).
+ * dintel es una línea sola). Una barra dibujada como un rectángulo, sin círculos ni líneas (las
+ * cenefas), se engancha por las puntas y el medio de su eje, igual que un dintel: así queda centrada
+ * de columna a columna.
  */
 function puntosDeReferencia(m, simbolo) {
   if (!simbolo) return [];
@@ -98,6 +103,13 @@ function puntosDeReferencia(m, simbolo) {
       const [[x1, y1], [x2, y2]] = path.p;
       puntos.push({ ...aMundo(m, x1, y1), tipo: 'extremo' }, { ...aMundo(m, x2, y2), tipo: 'extremo' }, { ...aMundo(m, (x1 + x2) / 2, (y1 + y2) / 2), tipo: 'medio' });
     }
+  }
+  const w = simbolo.ancho || 0;
+  const h = simbolo.profundidad || 0;
+  if (puntos.length === 0 && w >= h * PROPORCION_BARRA) {
+    puntos.push({ ...aMundo(m, 0, h / 2), tipo: 'extremo' }, { ...aMundo(m, w, h / 2), tipo: 'extremo' }, { ...aMundo(m, w / 2, h / 2), tipo: 'medio' });
+  } else if (puntos.length === 0 && h >= w * PROPORCION_BARRA) {
+    puntos.push({ ...aMundo(m, w / 2, 0), tipo: 'extremo' }, { ...aMundo(m, w / 2, h), tipo: 'extremo' }, { ...aMundo(m, w / 2, h / 2), tipo: 'medio' });
   }
   return puntos;
 }
