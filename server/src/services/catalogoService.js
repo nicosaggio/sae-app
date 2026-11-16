@@ -387,7 +387,7 @@ function obtenerPaginas(versionId) {
   const paginas = db.prepare('SELECT * FROM catalogo_paginas WHERE version_id = ? ORDER BY orden, id').all(version.id);
   const filas = db
     .prepare(
-      `SELECT po.pagina_id, po.banda, po.columna, i.id AS item_id, i.codigo, i.descripcion_catalogo, i.descripcion_formato, i.imagen, i.activo, vp.sae, vp.estado_precio
+      `SELECT po.pagina_id, po.banda, po.columna, i.id AS item_id, i.codigo, i.rubro, i.descripcion_catalogo, i.descripcion_formato, i.imagen, i.activo, vp.sae, vp.estado_precio
          FROM catalogo_posiciones po JOIN catalogo_paginas p ON p.id = po.pagina_id AND p.version_id = ?
          JOIN catalogo_items i ON i.id = po.item_id
          LEFT JOIN catalogo_version_precios vp ON vp.item_id = i.id AND vp.version_id = ?
@@ -404,7 +404,7 @@ function obtenerPaginas(versionId) {
       .map((f) => ({
         banda: f.banda,
         columna: f.columna,
-        item: { id: f.item_id, codigo: f.codigo, descripcion_catalogo: f.descripcion_catalogo, descripcion_formato: f.descripcion_formato ? JSON.parse(f.descripcion_formato) : null, imagen: f.imagen, activo: f.activo, sae: f.sae, estado_precio: f.estado_precio },
+        item: { id: f.item_id, codigo: f.codigo, rubro: f.rubro, descripcion_catalogo: f.descripcion_catalogo, descripcion_formato: f.descripcion_formato ? JSON.parse(f.descripcion_formato) : null, imagen: f.imagen, activo: f.activo, sae: f.sae, estado_precio: f.estado_precio },
       })),
   }));
 }

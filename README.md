@@ -246,6 +246,11 @@ dependen de uno sin precio quedan sin precio.
    **"aplicar a todos"**: en ese caso el porcentaje de la versión pisa también los propios.
 3. En **Vista** elegí la versión para revisarla y usá **"Exportar PDF"** (o el botón PDF de la
    lista). El archivo se llama `CATALOGO SAE - <versión> - AAAA-MM-DD.pdf`.
+   Con **"PDF con opciones…"** se puede imprimir **sin precios** (la fila del precio queda vacía y
+   del pie salen las líneas que hablan de precios) y/o **sólo algunos rubros** (por ejemplo,
+   MOBILIARIO): cada ítem queda en su celda de siempre, las páginas que se quedan sin ítems no
+   salen y la portada se conserva. El nombre del archivo lo dice, por ejemplo
+   `CATALOGO SAE - General - MOBILIARIO - sin precios - AAAA-MM-DD.pdf`.
 4. Si hace falta, con la versión elegida en **Vista** usá **"Organizar páginas"** para sacar o
    cambiar ítems, mover o agregar páginas. Cada versión tiene **sus propias páginas**: una versión
    nueva arranca con una copia de las de la General, y lo que organices en ella no cambia la

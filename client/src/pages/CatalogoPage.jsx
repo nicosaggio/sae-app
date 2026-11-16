@@ -108,6 +108,7 @@ export function CatalogoPage() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
+  const [opcionesPdf, setOpcionesPdf] = useState(null); // { sinPrecios, rubros: Set } mientras se eligen las opciones del PDF
 
   async function cargarVersiones(mantener) {
     const lista = await api.get('/versiones');
@@ -241,6 +242,26 @@ export function CatalogoPage() {
     }
   }
 
+  // Rubros de los ítems que están en las páginas de esta versión, para elegir cuáles imprimir.
+  const rubrosDeLaVersion = [...new Set(paginas.flatMap((p) => p.posiciones.map((x) => x.item.rubro).filter(Boolean)))].sort();
+
+  function urlDelPdf() {
+    const parametros = new URLSearchParams();
+    if (opcionesPdf.sinPrecios) parametros.set('sin_precios', '1');
+    if (opcionesPdf.rubros.size < rubrosDeLaVersion.length) parametros.set('rubros', [...opcionesPdf.rubros].join(','));
+    const consulta = parametros.toString();
+    return `/api/catalogo/versiones/${versionId}/pdf${consulta ? `?${consulta}` : ''}`;
+  }
+
+  function alternarRubro(rubro) {
+    setOpcionesPdf((o) => {
+      const rubros = new Set(o.rubros);
+      if (rubros.has(rubro)) rubros.delete(rubro);
+      else rubros.add(rubro);
+      return { ...o, rubros };
+    });
+  }
+
   if (cargando) return <p className="texto-suave">Cargando…</p>;
 
   return (
@@ -304,8 +325,46 @@ export function CatalogoPage() {
                 Exportar PDF
               </a>
             )}
+            {!organizando && versionId && (
+              <button onClick={() => setOpcionesPdf(opcionesPdf ? null : { sinPrecios: true, rubros: new Set(rubrosDeLaVersion) })}>
+                PDF con opciones…
+              </button>
+            )}
           </div>
         </div>
+        {opcionesPdf && !organizando && (
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--color-borde, #ddd)', paddingTop: 12 }}>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+              <input type="checkbox" checked={opcionesPdf.sinPrecios} onChange={(e) => setOpcionesPdf((o) => ({ ...o, sinPrecios: e.target.checked }))} />
+              Sin precios (la fila del precio queda vacía y el pie no habla de precios)
+            </label>
+            <div className="texto-suave" style={{ marginBottom: 4 }}>
+              Rubros a imprimir (las páginas que quedan sin ítems no salen):
+            </div>
+            <div className="toolbar" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+              {rubrosDeLaVersion.map((rubro) => (
+                <label key={rubro} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={opcionesPdf.rubros.has(rubro)} onChange={() => alternarRubro(rubro)} />
+                  {rubro}
+                </label>
+              ))}
+              <button type="button" onClick={() => setOpcionesPdf((o) => ({ ...o, rubros: new Set(rubrosDeLaVersion) }))}>
+                Todos
+              </button>
+              <button type="button" onClick={() => setOpcionesPdf((o) => ({ ...o, rubros: new Set() }))}>
+                Ninguno
+              </button>
+            </div>
+            {opcionesPdf.rubros.size === 0 ? (
+              <span className="texto-suave">Elegí al menos un rubro.</span>
+            ) : (
+              <a className="boton primario" href={urlDelPdf()}>
+                Exportar PDF {opcionesPdf.sinPrecios ? 'sin precios' : ''}
+                {opcionesPdf.rubros.size < rubrosDeLaVersion.length ? ` (${[...opcionesPdf.rubros].join(', ')})` : ''}
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       {totalHojas === 0 ? (

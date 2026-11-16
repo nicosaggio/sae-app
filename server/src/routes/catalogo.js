@@ -114,7 +114,8 @@ router.delete('/versiones/:id', bloquearSiSoloEstado, (req, res) => {
   versionesService.eliminarVersion(id(req));
   res.json({ ok: true });
 });
-router.get('/versiones/:id/pdf', (req, res) => catalogoPdfService.streamPdf(res, id(req)));
+// ?sin_precios=1 y ?rubros=MOBILIARIO,... para imprimir el catálogo sin precios o sólo algunos rubros.
+router.get('/versiones/:id/pdf', (req, res) => catalogoPdfService.streamPdf(res, id(req), catalogoPdfService.opcionesDeConsulta(req.query)));
 
 // Crear una versión con los precios finales de un archivo (planilla de presupuesto de un evento
 // puntual): previsualizar y después confirmar, igual que la actualización de la base parche.

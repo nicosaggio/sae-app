@@ -77,8 +77,8 @@ test.after(() => {
   fs.rmSync(carpeta, { recursive: true, force: true });
 });
 
-async function pdfABuffer(versionId) {
-  const { doc, faltantes, nombreArchivo } = pdf.construirPdf(versionId);
+async function pdfABuffer(versionId, opciones) {
+  const { doc, faltantes, nombreArchivo } = pdf.construirPdf(versionId, opciones);
   const partes = [];
   doc.on('data', (p) => partes.push(p));
   const terminado = new Promise((r) => doc.on('end', r));
@@ -260,4 +260,39 @@ test('armarLineas: una palabra más ancha que la celda queda sola en su línea (
   const lineas = pdf.armarLineas([{ t: 'PALABRAINTERMINABLEMENTELARGA fin', b: true, sz: 10 }], 30, medir);
   assert.deepEqual(textos(lineas), ['PALABRAINTERMINABLEMENTELARGA', 'fin']);
   assert.deepEqual(pdf.armarLineas([], 100, medir), []);
+});
+
+test('PDF sin precios y sólo de algunos rubros: filtra ítems y páginas, conserva la portada y saca del pie lo que habla de precios', async () => {
+  db.prepare("UPDATE catalogo_ajustes SET valor = '1' WHERE clave = 'mostrar_decimales'").run();
+  db.prepare("UPDATE catalogo_items SET rubro = 'MOBILIARIO' WHERE codigo = 'MC-01'").run();
+  db.prepare("UPDATE catalogo_items SET rubro = 'PISOS' WHERE codigo = 'MILES'").run();
+  db.prepare("UPDATE catalogo_items SET rubro = 'AUDIOVISUAL' WHERE codigo IN ('TV-43', 'SIN-1', 'SINFOTO')").run();
+
+  // Sin precios, todo el catálogo
+  const sinPrecios = await textoPorPagina((await pdfABuffer(idGeneral, { sinPrecios: true })).buffer);
+  assert.equal(sinPrecios.length, 3, 'portada + 2 páginas, igual que con precios');
+  assert.ok(!sinPrecios[1].includes('77.700,00') && !sinPrecios[1].includes('S / P'), 'la fila del precio queda vacía');
+  assert.match(sinPrecios[1], /MC-01/);
+  assert.doesNotMatch(sinPrecios[1], /PRECIOS NO INCLUYEN|válidos hasta/, 'el pie no habla de precios');
+  assert.match(sinPrecios[1], /disponibilidad en el momento de la reserva\./, 'lo demás del pie queda');
+
+  // Sólo MOBILIARIO: la página de PISOS no sale, y en la otra sólo queda MC-01 (la portada sí)
+  const muebles = await pdfABuffer(idGeneral, { sinPrecios: true, rubros: ['mobiliario'] });
+  const paginas = await textoPorPagina(muebles.buffer);
+  assert.equal(paginas.length, 2, 'portada + la única página con muebles');
+  assert.equal(paginas[0].trim(), '');
+  assert.match(paginas[1], /MC-01/);
+  assert.ok(!paginas[1].includes('TV-43') && !paginas[1].includes('MILES'));
+  assert.match(muebles.nombreArchivo, /^CATALOGO SAE - General - MOBILIARIO - sin precios - \d{4}-\d{2}-\d{2}\.pdf$/);
+
+  // Un rubro que no está en la primera página: la portada sale igual
+  const pisos = await textoPorPagina((await pdfABuffer(idGeneral, { rubros: ['PISOS'] })).buffer);
+  assert.equal(pisos.length, 2);
+  assert.match(pisos[1], /SAE - PISOS/);
+  assert.match(pisos[1], /1\.234\.500,00/, 'con precios, si no se pidió lo contrario');
+
+  // Por la dirección, como lo pide la pantalla
+  const res = await fetch(`${base}/api/catalogo/versiones/${idGeneral}/pdf?sin_precios=1&rubros=MOBILIARIO`, { headers: { cookie } });
+  assert.equal(res.status, 200);
+  assert.match(decodeURIComponent(res.headers.get('content-disposition')), /MOBILIARIO - sin precios/);
 });

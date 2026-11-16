@@ -68,9 +68,22 @@ function formatearPesos(valor, conDecimales = true) {
   return conDecimales ? `${miles},${String(centavos).padStart(2, '0')}` : miles;
 }
 
-function nombreDeArchivo(nombreVersion, fecha = new Date()) {
-  const limpio = String(nombreVersion).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
-  return `CATALOGO SAE - ${limpio} - ${fecha.toISOString().slice(0, 10)}.pdf`;
+function nombreDeArchivo(nombreVersion, fecha = new Date(), extras = []) {
+  const limpio = (t) => String(t).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return ['CATALOGO SAE', limpio(nombreVersion), ...extras.map(limpio), fecha.toISOString().slice(0, 10)].join(' - ') + '.pdf';
+}
+
+/**
+ * Opciones del PDF que vienen en la dirección: `sin_precios=1` deja vacía la fila del precio, y
+ * `rubros=MOBILIARIO,CARPINTERIA` imprime sólo los ítems de esos rubros (sin ninguno, todos).
+ */
+function opcionesDeConsulta(query = {}) {
+  const sinPrecios = ['1', 'true', 'si'].includes(String(query.sin_precios || '').toLowerCase());
+  const rubros = String(query.rubros || '')
+    .split(',')
+    .map((r) => r.trim().toUpperCase())
+    .filter(Boolean);
+  return { sinPrecios, rubros };
 }
 
 /**
@@ -125,14 +138,19 @@ function leerAjustesDePdf() {
   return Object.fromEntries(db.prepare('SELECT clave, valor FROM catalogo_ajustes').all().map((a) => [a.clave, a.valor]));
 }
 
-/** Todo lo que el PDF necesita, ya leído de la base. */
-function cargarDatos(versionId) {
+/**
+ * Todo lo que el PDF necesita, ya leído de la base. Con `rubros`, sólo esos ítems (cada uno en su
+ * celda de siempre) y sólo las páginas a las que les queda alguno; la portada se conserva. Sin
+ * precios, el pie pierde las líneas que hablan de precios.
+ */
+function cargarDatos(versionId, { sinPrecios = false, rubros: pedidos = [] } = {}) {
+  const rubros = [...new Set(pedidos.map((r) => String(r).trim().toUpperCase()).filter(Boolean))];
   const version = db.prepare('SELECT * FROM catalogo_versiones WHERE id = ?').get(versionId);
   if (!version) throw errorDePdf('Versión de catálogo no encontrada', 404);
 
   const conPrecios = db.prepare('SELECT COUNT(*) AS n FROM catalogo_version_precios WHERE version_id = ?').get(versionId).n;
   const totalItems = db.prepare('SELECT COUNT(*) AS n FROM catalogo_items').get().n;
-  if (totalItems > 0 && conPrecios === 0) {
+  if (!sinPrecios && totalItems > 0 && conPrecios === 0) {
     throw errorDePdf(`La versión "${version.nombre}" todavía no tiene precios calculados. Recalculala antes de exportar.`, 409);
   }
 
@@ -140,7 +158,7 @@ function cargarDatos(versionId) {
   const paginas = db.prepare('SELECT * FROM catalogo_paginas WHERE version_id = ? ORDER BY orden, id').all(versionId);
   const filas = db
     .prepare(
-      `SELECT po.pagina_id, po.banda, po.columna, i.id AS item_id, i.codigo, i.descripcion, i.descripcion_catalogo,
+      `SELECT po.pagina_id, po.banda, po.columna, i.id AS item_id, i.codigo, i.rubro, i.descripcion, i.descripcion_catalogo,
               i.descripcion_formato, i.imagen, vp.sae, vp.estado_precio
          FROM catalogo_posiciones po
          JOIN catalogo_paginas p ON p.id = po.pagina_id AND p.version_id = ?
@@ -149,17 +167,32 @@ function cargarDatos(versionId) {
     )
     .all(versionId, versionId);
 
+  const filtrar = rubros.length > 0;
+  const deLosRubros = new Set(rubros);
   const porPagina = new Map(paginas.map((p) => [p.id, { ...p, items: [] }]));
   for (const fila of filas) {
+    if (filtrar && !deLosRubros.has(String(fila.rubro || '').toUpperCase())) continue;
     const pagina = porPagina.get(fila.pagina_id);
     if (pagina) pagina.items.push(fila);
   }
+  const elegidas = [...porPagina.values()].filter((p) => !filtrar || p.items.length > 0);
 
   const plantilla = version.pie_legal || ajustes.pie_legal || '';
+  let pie = plantilla.replace('{fecha_vigencia}', fechaLarga(version.fecha_vigencia) || '—');
+  if (sinPrecios) {
+    pie = pie
+      .split('\n')
+      .filter((linea) => !/precio/i.test(linea))
+      .join('\n');
+  }
   return {
     version,
-    paginas: [...porPagina.values()],
-    pie: plantilla.replace('{fecha_vigencia}', fechaLarga(version.fecha_vigencia) || '—'),
+    paginas: elegidas,
+    // La portada es de la primera página del catálogo: sale aunque esa página no entre en el filtro.
+    conPortada: elegidas.length > 0 && paginas.length > 0 && Boolean(paginas[0].logo_grande),
+    sinPrecios,
+    rubros,
+    pie,
     logo: ajustes.logo_imagen ? rutaDeImagen(ajustes.logo_imagen) : null,
     conDecimales: ajustes.mostrar_decimales !== '0',
   };
@@ -292,7 +325,7 @@ function dibujarItem(hoja, item, x, yBanda, datos, faltantes) {
   hoja.ficha(corridasDe(item), x, y, ANCHO_ITEM, ALTO.ficha);
   y += ALTO.ficha;
 
-  hoja.precio(item, x, y, datos.conDecimales);
+  if (!datos.sinPrecios) hoja.precio(item, x, y, datos.conDecimales);
   hoja.linea(x, y + ALTO.precio, x + ANCHO_ITEM, GROSOR.medio);
 }
 
@@ -329,8 +362,8 @@ function dibujarPagina(doc, pagina, datos, faltantes) {
  * Arma el PDF de una versión del catálogo. Devuelve el documento (todavía sin cerrar) y el nombre sugerido.
  * `faltantes` lista las imágenes que figuran en la base pero no están en disco (se imprime sin foto).
  */
-function construirPdf(versionId) {
-  const datos = cargarDatos(versionId);
+function construirPdf(versionId, opciones = {}) {
+  const datos = cargarDatos(versionId, opciones);
   const doc = new PDFDocument({
     autoFirstPage: false,
     size: 'A4',
@@ -340,19 +373,19 @@ function construirPdf(versionId) {
   registrarFuentes(doc);
 
   const faltantes = [];
-  datos.paginas.forEach((pagina, i) => {
-    if (i === 0 && pagina.logo_grande) dibujarPortada(doc, datos);
-    dibujarPagina(doc, pagina, datos, faltantes);
-  });
+  if (datos.conPortada) dibujarPortada(doc, datos);
+  datos.paginas.forEach((pagina) => dibujarPagina(doc, pagina, datos, faltantes));
   if (datos.paginas.length === 0) {
     doc.addPage({ size: 'A4', margin: 0 });
-    doc.font('cuerpo').fontSize(12).text('El catálogo todavía no tiene páginas cargadas.', 72, 72);
+    const aviso = datos.rubros.length > 0 ? `El catálogo no tiene ítems de ${datos.rubros.join(', ')}.` : 'El catálogo todavía no tiene páginas cargadas.';
+    doc.font('cuerpo').fontSize(12).text(aviso, 72, 72);
   }
-  return { doc, nombreArchivo: nombreDeArchivo(datos.version.nombre), faltantes };
+  const extras = [...datos.rubros, ...(datos.sinPrecios ? ['sin precios'] : [])];
+  return { doc, nombreArchivo: nombreDeArchivo(datos.version.nombre, new Date(), extras), faltantes };
 }
 
-function streamPdf(res, versionId) {
-  const { doc, nombreArchivo, faltantes } = construirPdf(versionId);
+function streamPdf(res, versionId, opciones = {}) {
+  const { doc, nombreArchivo, faltantes } = construirPdf(versionId, opciones);
   if (faltantes.length > 0) console.warn(`Catálogo PDF: ${faltantes.length} imágenes no están en disco (${faltantes.slice(0, 3).join(', ')}...)`);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(nombreArchivo)}`);
@@ -360,4 +393,4 @@ function streamPdf(res, versionId) {
   doc.end();
 }
 
-module.exports = { construirPdf, streamPdf, armarLineas, formatearPesos, fechaLarga, nombreDeArchivo, cargarDatos, ESCALA };
+module.exports = { construirPdf, streamPdf, opcionesDeConsulta, armarLineas, formatearPesos, fechaLarga, nombreDeArchivo, cargarDatos, ESCALA };
