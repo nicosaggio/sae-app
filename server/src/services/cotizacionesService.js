@@ -247,10 +247,13 @@ function exigirPendiente(fila) {
   }
 }
 
+/** El nombre con el que se arma el ID de cliente: el del responsable, salvo en un duplicado (el del responsable del original). */
+const responsableDelCodigo = (fila) => fila.responsable_codigo || fila.responsable;
+
 /** Recalcula el ID de cliente y, si cambió, le da el siguiente número de ese cliente. */
 function asignarIdentificacion(id) {
   const fila = leerFila(id);
-  const idCliente = generarIdCliente({ evento: fila.evento_nombre, tipo: fila.tipo, lote: fila.lote, nombre_stand: fila.nombre_stand, responsable: fila.responsable });
+  const idCliente = generarIdCliente({ evento: fila.evento_nombre, tipo: fila.tipo, lote: fila.lote, nombre_stand: fila.nombre_stand, responsable: responsableDelCodigo(fila) });
   if (idCliente === fila.id_cliente && (idCliente === null || fila.numero !== null)) return;
   let numero = null;
   if (idCliente) {
@@ -269,15 +272,15 @@ function sincronizarCliente(id, usuario) {
 }
 
 /**
- * `responsableDe` (opcional) es para los duplicados: el ID de cliente incluye la última letra del
- * responsable, así que el duplicado tiene que conservar el del original o cambiaría de ID y su número
- * volvería a empezar en 1. Sigue quedando registrado quién lo creó (`creado_por`).
+ * El responsable es siempre quien lo carga (o lo duplica). `codigoDe` (opcional) es para los duplicados:
+ * el ID de cliente incluye la última letra del responsable, así que el duplicado lo sigue armando con el
+ * nombre del responsable del original; si no, cambiaría de ID y su número volvería a empezar en 1.
  */
-function insertarCotizacion(datos, usuario, { responsableDe } = {}) {
+function insertarCotizacion(datos, usuario, { codigoDe } = {}) {
   const campos = normalizarDatos(datos);
-  const columnas = ['fecha_carga', 'responsable_id', 'responsable', 'catalogo_version_id', 'creado_por', ...Object.keys(campos)];
-  const responsable = responsableDe ? { id: responsableDe.responsable_id, nombre: responsableDe.responsable } : { id: usuario.id, nombre: nombreDeUsuario(usuario) };
-  const valores = [hoyIso(), responsable.id, responsable.nombre, versionGeneral().id, usuario.id, ...Object.values(campos)];
+  const columnas = ['fecha_carga', 'responsable_id', 'responsable', 'responsable_codigo', 'catalogo_version_id', 'creado_por', ...Object.keys(campos)];
+  const responsableCodigo = codigoDe ? responsableDelCodigo(codigoDe) : null;
+  const valores = [hoyIso(), usuario.id, nombreDeUsuario(usuario), responsableCodigo, versionGeneral().id, usuario.id, ...Object.values(campos)];
   const info = db.prepare(`INSERT INTO cotizaciones (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`).run(...valores);
   const id = Number(info.lastInsertRowid);
   asignarIdentificacion(id);
@@ -351,7 +354,7 @@ function reabrir(id) {
   });
 }
 
-/** Copia los datos y los ítems a un presupuesto nuevo (pendiente), a nombre de quien lo duplica. */
+/** Copia los datos y los ítems a un presupuesto nuevo (pendiente), a nombre de quien lo duplica y con el siguiente número del original. */
 function duplicar(id, usuario) {
   return transaction(() => {
     const origen = obtener(id);
@@ -370,7 +373,7 @@ function duplicar(id, usuario) {
         notas: origen.notas,
       },
       usuario,
-      { responsableDe: origen }
+      { codigoDe: origen }
     );
     db.prepare('UPDATE cotizaciones SET catalogo_version_id = ?, iva_porcentaje = ?, descuento_porcentaje = ? WHERE id = ?').run(
       origen.catalogo_version_id,
@@ -550,7 +553,7 @@ function actualizarLoteDeConfirmadas(loteId, codigoNuevo) {
       )
       .all(codigoNuevo, loteId);
     for (const fila of filas) {
-      const idCliente = generarIdCliente({ evento: fila.evento_nombre, tipo: fila.tipo, lote: codigoNuevo, nombre_stand: fila.nombre_stand, responsable: fila.responsable });
+      const idCliente = generarIdCliente({ evento: fila.evento_nombre, tipo: fila.tipo, lote: codigoNuevo, nombre_stand: fila.nombre_stand, responsable: responsableDelCodigo(fila) });
       let numero = idCliente ? fila.numero : null;
       if (idCliente && idCliente !== fila.id_cliente) {
         const usado = numero !== null && db.prepare('SELECT 1 FROM cotizaciones WHERE id_cliente = ? AND numero = ? AND id != ?').get(idCliente, numero, fila.id);

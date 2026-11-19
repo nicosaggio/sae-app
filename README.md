@@ -444,6 +444,11 @@ el PDF del evento (ni en el detalle del lote ni en los totales), ni suma en las 
 Totales ni en la facturación por evento y de todo el año. Si todos los presupuestos de un stand están
 cancelados, tampoco se imprime su croquis.
 
+En el panel del presupuesto hay un botón **"Cancelar presupuesto"** (pregunta antes y explica qué pasa) y,
+si ya está cancelado, **"Reactivar presupuesto"** (se elige con qué estado de cobro vuelve). Lo puede usar
+también un usuario "solo estado", porque es un cambio del estado de cobro. Al tocar **"Borrar presupuesto"**
+la pregunta ofrece **"Mejor cancelarlo"**: borrar no se puede deshacer, cancelar sí.
+
 ### 9.1) Cómo se arma un presupuesto
 
 1. **Datos**: los de la hoja CARGA del Excel (expo, tipo, lote, nombre del stand, razón social,
@@ -480,8 +485,9 @@ Desde el menú **⋯** se puede **duplicar** un presupuesto en cualquier estado 
 ítems y los adjuntos), **marcar como rechazado** uno pendiente, **reabrir** uno rechazado, y
 **eliminar** uno pendiente o rechazado (uno confirmado no, porque ya es parte del evento). El duplicado toma
 **el siguiente número de presupuesto del mismo cliente** (si el original es `AE15ST1-1`, la copia
-es `AE15ST1-2`). Para eso conserva al responsable del original, porque el ID de cliente incluye la
-última letra del responsable; de todos modos queda registrado quién lo duplicó.
+es `AE15ST1-2`) y queda **a nombre de quien lo duplica** (es el responsable). Como el ID de cliente
+incluye la última letra del responsable, el duplicado lo sigue armando con el nombre del responsable
+del original (por eso no cambia de ID ni vuelve a empezar en 1, aunque se editen sus datos).
 
 ### 9.2) ID de cliente y número de presupuesto
 

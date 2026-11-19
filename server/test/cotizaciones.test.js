@@ -527,7 +527,7 @@ test('ya no existe el import automático de Excel: los presupuestos que vinieron
 // Duplicar y eliminar
 // ---------------------------------------------------------------------------------------------
 
-test('duplicar copia los datos y los ítems como un presupuesto nuevo, con el mismo responsable que el original', async () => {
+test('duplicar copia los datos y los ítems como un presupuesto nuevo, a nombre de quien lo duplica', async () => {
   const origen = await nuevaCompleta({ contacto: 'Ana' });
   await api('oper1', 'POST', `/${origen.id}/lineas`, { catalogo_item_id: idDe('CE-100'), cantidad: 2, comentario: 'Gris' });
   const linea = (await api('oper1', 'GET', `/${origen.id}`)).cuerpo.lineas[0];
@@ -536,8 +536,10 @@ test('duplicar copia los datos y los ítems como un presupuesto nuevo, con el mi
   const copia = (await api('admin1', 'POST', `/${origen.id}/duplicar`)).cuerpo;
   assert.notEqual(copia.id, origen.id);
   assert.equal(copia.estado, 'pendiente');
-  assert.equal(copia.responsable, 'Oper Uno', 'el responsable es el del original (forma parte del ID de cliente)');
-  assert.equal(db.prepare('SELECT creado_por FROM cotizaciones WHERE id = ?').get(copia.id).creado_por, db.prepare("SELECT id FROM usuarios WHERE nombre_usuario = 'admin1'").get().id, 'y queda registrado quién lo duplicó');
+  const admin = db.prepare("SELECT id FROM usuarios WHERE nombre_usuario = 'admin1'").get().id;
+  assert.equal(copia.responsable_id, admin, 'el responsable es quien lo duplica');
+  assert.notEqual(copia.responsable, 'Oper Uno');
+  assert.equal(db.prepare('SELECT creado_por FROM cotizaciones WHERE id = ?').get(copia.id).creado_por, admin);
   assert.equal(copia.contacto, 'Ana');
   assert.equal(copia.razon_social, 'ACME SA');
   assert.deepEqual(copia.lineas.map((l) => [l.codigo, l.cantidad, l.precio_unitario, l.comentario]), [['CE-100', 2, 1200, 'Gris']]);
@@ -561,8 +563,14 @@ test('duplicar siempre pasa al siguiente número de presupuesto, aunque lo dupli
   assert.equal(copia.id_cliente, original.id_cliente, 'mismo ID de cliente');
   assert.equal(copia.numero, 2, 'el siguiente número');
   assert.equal(copia.cod_fac, `${original.id_cliente}-2`);
-  assert.equal(copia.responsable, 'Ana Torres', 'sigue a nombre del responsable original, que es parte del ID de cliente');
-  assert.equal(db.prepare('SELECT creado_por FROM cotizaciones WHERE id = ?').get(copia.id).creado_por, db.prepare("SELECT id FROM usuarios WHERE nombre_usuario = 'pedro1'").get().id, 'pero queda registrado quién lo duplicó');
+  const pedro = db.prepare("SELECT id FROM usuarios WHERE nombre_usuario = 'pedro1'").get();
+  assert.equal(copia.responsable_id, pedro.id, 'queda a nombre de quien lo duplicó');
+  assert.equal(copia.responsable, 'Pedro Gomez');
+  assert.equal(db.prepare('SELECT creado_por FROM cotizaciones WHERE id = ?').get(copia.id).creado_por, pedro.id);
+
+  // Editar los datos del duplicado no le cambia el código: sigue con la letra del responsable original
+  const editada = (await api('pedro1', 'PUT', `/${copia.id}`, { ...datos, contacto: 'Otro contacto' })).cuerpo;
+  assert.equal(editada.cod_fac, `${original.id_cliente}-2`);
 
   // Duplicar el duplicado (lo hace un tercero) sigue la cadena
   const tercera = (await api('oper1', 'POST', `/${copia.id}/duplicar`)).cuerpo;

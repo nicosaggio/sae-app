@@ -8,8 +8,9 @@ import { useAuth } from '../context/AuthContext';
 import { pesos } from '../catalogoFormat';
 
 /**
- * Un presupuesto confirmado: sus datos (se guardan solos al salir de cada campo), sus productos y el botón de
- * borrarlo. Un usuario "solo estado" sólo puede cambiar el estado de cobro. `onCambiado` avisa que cambió la
+ * Un presupuesto confirmado: sus datos (se guardan solos al salir de cada campo), sus productos y los botones de
+ * cancelarlo (o reactivarlo) y de borrarlo. Cancelar es cambiar el estado de cobro, así que también puede un
+ * usuario "solo estado", que no puede cambiar nada más. `onCambiado` avisa que cambió la
  * estructura (se agregó o quitó una línea, se borró) y hay que volver a leerlo; `onGuardado` (opcional), que se
  * guardó un dato suelto.
  */
@@ -24,7 +25,8 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado, onGuardad
   const [cantidadEditada, setCantidadEditada] = useState('');
   const [comentarioEditado, setComentarioEditado] = useState('');
   const [precioEditado, setPrecioEditado] = useState('');
-  const [dialogo, setDialogo] = useState(null); // la pregunta abierta: { tipo: 'borrar' } o { tipo: 'linea', linea }
+  const [dialogo, setDialogo] = useState(null); // la pregunta abierta: { tipo: 'borrar' | 'cancelar' | 'reactivar' } o { tipo: 'linea', linea }
+  const [estadoAlReactivar, setEstadoAlReactivar] = useState('pendiente_facturar');
   const idp = useId();
 
   async function guardarCampo(campos) {
@@ -57,6 +59,16 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado, onGuardad
       setError(err.message);
       setGuardado('inactivo');
     }
+  }
+
+  async function cancelarPresupuesto() {
+    setDialogo(null);
+    await cambiarEstado('cancelado');
+  }
+
+  async function reactivarPresupuesto() {
+    setDialogo(null);
+    await cambiarEstado(estadoAlReactivar);
   }
 
   async function borrarPresupuesto() {
@@ -139,6 +151,14 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado, onGuardad
           <div className="aviso aviso--error" role="alert">
             <Icono nombre="warn" />
             <div className="aviso-cuerpo">{error}</div>
+          </div>
+        )}
+        {datos.estado === 'cancelado' && (
+          <div className="aviso aviso--aviso" role="status">
+            <Icono nombre="warn" />
+            <div className="aviso-cuerpo">
+              <strong>Presupuesto cancelado.</strong> Queda como registro, pero no suma en los totales ni en la facturación y no sale en el PDF del evento.
+            </div>
           </div>
         )}
         {datos.origen === 'excel' && (
@@ -358,21 +378,74 @@ export function PresupuestoPanel({ presupuesto, productos, onCambiado, onGuardad
           )}
         </section>
 
-        {puedeEscribir && (
-          <div>
+        <div className="fila">
+          {datos.estado === 'cancelado' ? (
+            <button type="button" className="boton" onClick={() => setDialogo({ tipo: 'reactivar' })}>
+              Reactivar presupuesto
+            </button>
+          ) : (
+            <button type="button" className="boton" onClick={() => setDialogo({ tipo: 'cancelar' })}>
+              <Icono nombre="x" />
+              Cancelar presupuesto
+            </button>
+          )}
+          {puedeEscribir && (
             <button type="button" className="boton boton--peligro-suave" onClick={() => setDialogo({ tipo: 'borrar' })}>
               <Icono nombre="trash" />
               Borrar presupuesto
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
+      {dialogo?.tipo === 'cancelar' && (
+        <DialogoConfirmar titulo="¿Cancelar este presupuesto?" textoConfirmar="Sí, cancelarlo" textoCancelar="No, volver" onConfirmar={cancelarPresupuesto} onCancelar={() => setDialogo(null)}>
+          <p>
+            Queda como registro (se sigue viendo, tachado, en las listas y en el evento) pero <strong>no cuenta</strong>: no suma en los totales ni en la
+            facturación y no sale en el PDF del evento. Se puede reactivar cuando quieras.
+          </p>
+        </DialogoConfirmar>
+      )}
+      {dialogo?.tipo === 'reactivar' && (
+        <DialogoConfirmar titulo="¿Reactivar este presupuesto?" textoConfirmar="Sí, reactivarlo" textoCancelar="No, volver" onConfirmar={reactivarPresupuesto} onCancelar={() => setDialogo(null)}>
+          <p>Vuelve a contar en los totales, la facturación y el PDF del evento.</p>
+          <div className="campo">
+            <label htmlFor={`${idp}-reactivar`}>Con qué estado de cobro</label>
+            <select id={`${idp}-reactivar`} value={estadoAlReactivar} onChange={(e) => setEstadoAlReactivar(e.target.value)}>
+              {ESTADOS_PRESUPUESTO.filter((e) => e.value !== 'cancelado').map((e) => (
+                <option key={e.value} value={e.value}>
+                  {e.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </DialogoConfirmar>
+      )}
       {dialogo?.tipo === 'borrar' && (
-        <DialogoConfirmar titulo="¿Borrar este presupuesto?" textoConfirmar="Sí, borrar" textoCancelar="No, volver" peligro onConfirmar={borrarPresupuesto} onCancelar={() => setDialogo(null)}>
+        <DialogoConfirmar
+          titulo="¿Borrar este presupuesto?"
+          textoConfirmar="Sí, borrar"
+          textoCancelar="No, volver"
+          peligro
+          onConfirmar={borrarPresupuesto}
+          onCancelar={() => setDialogo(null)}
+          pieIzquierda={
+            datos.estado !== 'cancelado' && (
+              <button type="button" className="boton boton--primario" onClick={cancelarPresupuesto}>
+                Mejor cancelarlo
+              </button>
+            )
+          }
+        >
           <p>
             Se borran el presupuesto y todas sus líneas. <strong>No se puede deshacer.</strong>
           </p>
+          {datos.estado !== 'cancelado' && (
+            <p>
+              Si el cliente no lo va a tomar, conviene <strong>cancelarlo</strong> en vez de borrarlo: queda como registro pero no suma en los totales ni sale en el
+              PDF del evento, y se puede reactivar.
+            </p>
+          )}
         </DialogoConfirmar>
       )}
       {dialogo?.tipo === 'linea' && (
